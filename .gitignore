@@ -1,0 +1,37 @@
+# Secrets — NEVER commit these
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.pyc
+.pnpm-store/
+
+# Build outputs
+dist/
+.next/
+build/
+*.tsbuildinfo
+
+# Test artifacts
+test-results/
+playwright-report/
+screenshots/
+videos/
+coverage/
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+postgres_data/
