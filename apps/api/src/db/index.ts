@@ -6,16 +6,14 @@ import fs from 'fs/promises';
 
 dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
-// Debug — confirm env is loaded
-console.log('🔍 DATABASE_URL:', process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':***@') ?? 'NOT FOUND');
+console.log('🔍 DATABASE_URL:', process.env.DATABASE_URL?.replace(/:\/\/[^:]+:[^@]+@/, '://***:***@'));
 
-// Build connection config explicitly — don't rely on connectionString parsing
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
+
 export const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'qa_detective',
-  user: 'admin',
-  password: process.env.DB_PASSWORD,
+  connectionString: process.env.DATABASE_URL,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
