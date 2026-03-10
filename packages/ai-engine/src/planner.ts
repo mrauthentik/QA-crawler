@@ -13,7 +13,7 @@ const client = new OpenAI({
 export interface TestCase {
   id: string;
   name: string;
-  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance';
+  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance' | 'accessibility';
   priority: 'critical' | 'high' | 'medium' | 'low';
   steps: string[];
   expectedOutcome: string;
@@ -65,6 +65,12 @@ function extractJSON(raw: string): string {
   return matches.sort((a, b) => b.length - a.length)[0];
 }
 
+const MANDATORY_ACCESSIBILITY_TEST = {
+  name: 'Accessibility Compliance Check',
+  priority: 'medium',
+  type: 'accessibility',
+};
+
 const MANDATORY_SECURITY_TESTS = [
   { name: 'Verify HTTPS Connection and SSL', priority: 'critical' },
   { name: 'Test Content Security Policy (CSP)', priority: 'high' },
@@ -104,8 +110,13 @@ ${crawlData.links.length > 0
 ${hasForms
     ? crawlData.forms.map((f, i) => `${crawlData.links.length > 0 ? i + 3 : i + 2}. { "id": "TC00${crawlData.links.length > 0 ? i + 3 : i + 2}", "name": "Test Form Submission", "type": "form", "priority": "high" }`).join('\n')
     : ''}
+${(() => {
+    const base2 = 1 + (crawlData.links.length > 0 ? 1 : 0) + (hasForms ? crawlData.forms.length : 0);
+    return `${base2 + 1}. { "id": "TC00${base2 + 1}", "name": "${MANDATORY_ACCESSIBILITY_TEST.name}", "type": "accessibility", "priority": "${MANDATORY_ACCESSIBILITY_TEST.priority}" }`;
+  })()}
+
 ${MANDATORY_SECURITY_TESTS.map((t, i) => {
-    const base = 1 + (crawlData.links.length > 0 ? 1 : 0) + (hasForms ? crawlData.forms.length : 0);
+    const base = 1 + (crawlData.links.length > 0 ? 1 : 0) + (hasForms ? crawlData.forms.length : 0) + 1;
     return `${base + i + 1}. { "id": "TC00${base + i + 1}", "name": "${t.name}", "type": "security", "priority": "${t.priority}" }`;
   }).join('\n')}
 
