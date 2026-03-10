@@ -11,6 +11,7 @@ import {
     updateTestRun,
     saveTestResults,
     saveRecommendations,
+    saveFindings,
 } from '../db/index'
 
 const connection = {
@@ -69,6 +70,16 @@ export const pipelineWorker = new Worker(
       })));
 
       await saveRecommendations(runId, report.recommendations)
+      await saveFindings(runId, report.findings.map(f => ({
+        testId: f.testId,
+        testName: f.testName,
+        status: f.status,
+        severity: f.severity,
+        what: f.what,
+        why: f.why,
+        how: f.how,
+        screenshot: f.screenshot,
+      })))
       await job.updateProgress(100)
         console.log(`✅ Run ${runId} completed. Score: ${report.score}/100`);
       return { runId, score: report.score, grade: report.grade };

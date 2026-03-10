@@ -144,3 +144,22 @@ export async function getAllTestRuns() {
   );
   return rows;
 }
+
+export async function saveFindings(
+  runId: string,
+  findings: Array<{
+    testId: string;
+    testName: string;
+    status: string;
+    severity: string;
+    what: string;
+    why: string;
+    how: string;
+    screenshot?: string;
+  }>
+): Promise<void> {
+  await pool.query(
+    `UPDATE test_runs SET findings = $1 WHERE id = $2`,
+    [JSON.stringify(findings), runId]
+  );
+}

@@ -27,6 +27,16 @@ interface Run {
   completed_at?: string;
   results: TestResult[];
   recommendations: string[];
+  findings?: Array<{
+    testId: string;
+    testName: string;
+    status: string;
+    severity: string;
+    what: string;
+    why: string;
+    how: string;
+    screenshot?: string;
+  }>;
 }
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
@@ -191,6 +201,73 @@ export default function RunPage() {
           <p style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.7, fontWeight: 300 }}>
             {run.summary}
           </p>
+        </div>
+      )}
+
+
+      {/* AI Findings with WHAT/WHY/FIX */}
+      {run.findings && run.findings.length > 0 && (
+        <div style={{ marginBottom: '40px' }}>
+          <div className="font-mono" style={{
+            fontSize: '0.65rem', letterSpacing: '0.2em',
+            color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '16px',
+          }}>
+            Detective Findings — AI Analysis
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {run.findings.map((finding, i) => {
+              const s = SEVERITY_STYLES[finding.severity] ?? SEVERITY_STYLES.info;
+              return (
+                <div key={finding.testId ?? i} style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                  borderLeft: `3px solid ${s.color}`, borderRadius: '2px', overflow: 'hidden',
+                }}>
+                  <div style={{
+                    padding: '16px 20px', display: 'flex',
+                    alignItems: 'center', justifyContent: 'space-between',
+                    borderBottom: '1px solid var(--border)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span>{s.icon}</span>
+                      <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                        {finding.testName}
+                      </span>
+                    </div>
+                    <span className="badge" style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>
+                      {finding.severity}
+                    </span>
+                  </div>
+                  <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {[
+                      { label: 'WHAT', value: finding.what, color: 'var(--text-primary)' },
+                      { label: 'WHY',  value: finding.why,  color: 'var(--accent-amber)' },
+                      { label: 'FIX',  value: finding.how,  color: 'var(--accent-green)' },
+                    ].map(item => (
+                      <div key={item.label} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                        <span className="font-mono" style={{
+                          fontSize: '0.65rem', letterSpacing: '0.12em',
+                          color: item.color, minWidth: '36px', marginTop: '3px', opacity: 0.8,
+                        }}>
+                          {item.label}
+                        </span>
+                        <span style={{
+                          fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.88rem',
+                          color: 'var(--text-secondary)', lineHeight: 1.6, fontWeight: 300,
+                        }}>
+                          {item.value}
+                        </span>
+                      </div>
+                    ))}
+                    {finding.screenshot && (
+                      <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+                        📸 {finding.screenshot}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
