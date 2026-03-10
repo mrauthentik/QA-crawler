@@ -3,11 +3,10 @@ import { resolve } from 'path'
 dotenv.config({path: resolve(__dirname, '../../../.env')})
 
 import { Worker } from 'bullmq'
-import { crawlPage } from '../../../packages/crawler/src/index'
-import { generateTestPlan } from '../../../packages/ai-engine/src/planner';
-import { executeTestPlan } from '../../../packages/executor/src/index';
-import { generateReport } from '../../../packages/reporter/src/index';
-
+import { crawlPage } from '@qa-detective/crawler';
+import { generateTestPlan } from '@qa-detective/ai-engine';
+import { executeTestPlan } from '@qa-detective/executor';
+import { generateReport } from '@qa-detective/reporter';
 import {
     updateTestRun,
     saveTestResults,

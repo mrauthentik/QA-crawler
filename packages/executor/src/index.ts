@@ -111,4 +111,3 @@ export async function executeTestPlan(
   };
 }
 
-export { TestResult } from './types';

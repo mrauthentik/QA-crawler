@@ -23,6 +23,18 @@ importers:
 
   apps/api:
     dependencies:
+      '@qa-detective/ai-engine':
+        specifier: workspace:*
+        version: link:../../packages/ai-engine
+      '@qa-detective/crawler':
+        specifier: workspace:*
+        version: link:../../packages/crawler
+      '@qa-detective/executor':
+        specifier: workspace:*
+        version: link:../../packages/executor
+      '@qa-detective/reporter':
+        specifier: workspace:*
+        version: link:../../packages/reporter
       bullmq:
         specifier: ^5.0.0
         version: 5.70.4
