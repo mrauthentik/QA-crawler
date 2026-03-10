@@ -9,6 +9,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@axe-core/playwright": "^4.11.1",
     "@qa-detective/shared": "workspace:*",
     "playwright": "^1.44.0"
   },
