@@ -32,3 +32,6 @@ CREATE TABLE IF NOT EXISTS recommendations (
 
 CREATE INDEX IF NOT EXISTS idx_test_results_run_id ON test_results(run_id);
 CREATE INDEX IF NOT EXISTS idx_test_runs_status ON test_runs(status);
+
+-- Add findings column to store WHAT/WHY/FIX analysis
+ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS findings JSONB DEFAULT '[]';

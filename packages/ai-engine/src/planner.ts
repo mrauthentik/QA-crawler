@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 
-// Load .env FIRST before anything else runs
 dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
 import OpenAI from 'openai';
@@ -38,6 +37,41 @@ export interface CrawlSummary {
   errors: string[];
 }
 
+function extractJSON(raw: string): string {
+  // Remove markdown code fences
+  const cleaned = raw.replace(/```json|```/g, '').trim();
+
+  // Find ALL JSON objects in the response — take the largest one
+  const matches: string[] = [];
+  let depth = 0;
+  let start = -1;
+
+  for (let i = 0; i < cleaned.length; i++) {
+    if (cleaned[i] === '{') {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (cleaned[i] === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        matches.push(cleaned.slice(start, i + 1));
+        start = -1;
+      }
+    }
+  }
+
+  if (matches.length === 0) throw new Error('No JSON object found in AI response');
+
+  // Return the largest JSON block — that's the complete one
+  return matches.sort((a, b) => b.length - a.length)[0];
+}
+
+const MANDATORY_SECURITY_TESTS = [
+  { name: 'Verify HTTPS Connection and SSL', priority: 'critical' },
+  { name: 'Test Content Security Policy (CSP)', priority: 'high' },
+  { name: 'Check XSS Protection Headers', priority: 'high' },
+  { name: 'Verify Clickjacking Protection', priority: 'high' },
+];
+
 export async function generateTestPlan(
   appDescription: string,
   crawlData: CrawlSummary
@@ -48,63 +82,112 @@ export async function generateTestPlan(
     throw new Error('GROQ_API_KEY is not set in your .env file');
   }
 
-  const prompt = `You are a senior QA engineer and security analyst.
-You have just crawled a web application and need to generate a comprehensive test plan.
+  const hasForms = crawlData.forms.length > 0;
 
-APP DESCRIPTION (what the app is supposed to do):
-${appDescription}
+  const prompt = `You are a senior QA engineer. Generate a test plan as a single JSON object.
 
-CRAWL DATA (what was discovered):
-- URL: ${crawlData.url}
-- Page Title: ${crawlData.title}
-- Links found: ${crawlData.links.join(', ') || 'none'}
-- Forms found: ${crawlData.forms.length} form(s)
-  ${crawlData.forms.map(f => `  Form: action="${f.action}" method="${f.method}" fields=[${f.fields.join(', ')}]`).join('\n')}
-- Console errors detected: ${crawlData.errors.length > 0 ? crawlData.errors.join(', ') : 'none'}
+APP: ${appDescription}
+URL: ${crawlData.url}
+TITLE: ${crawlData.title}
+LINKS (${crawlData.links.length}): ${crawlData.links.slice(0, 8).join(', ') || 'none'}
+FORMS: ${hasForms
+    ? crawlData.forms.map(f => `action="${f.action}" fields=[${f.fields.join(', ')}]`).join(' | ')
+    : 'NONE — do not create form tests'}
+CONSOLE ERRORS: ${crawlData.errors.join(', ') || 'none'}
 
-Generate a test plan as a JSON object with this exact structure:
+Generate test cases in this EXACT order with these EXACT names and types:
+
+1. { "id": "TC001", "name": "Page Load Performance Test", "type": "performance", "priority": "medium" }
+${crawlData.links.length > 0
+    ? '2. { "id": "TC002", "name": "Verify Navigation Links", "type": "navigation", "priority": "medium" }'
+    : ''}
+${hasForms
+    ? crawlData.forms.map((f, i) => `${crawlData.links.length > 0 ? i + 3 : i + 2}. { "id": "TC00${crawlData.links.length > 0 ? i + 3 : i + 2}", "name": "Test Form Submission", "type": "form", "priority": "high" }`).join('\n')
+    : ''}
+${MANDATORY_SECURITY_TESTS.map((t, i) => {
+    const base = 1 + (crawlData.links.length > 0 ? 1 : 0) + (hasForms ? crawlData.forms.length : 0);
+    return `${base + i + 1}. { "id": "TC00${base + i + 1}", "name": "${t.name}", "type": "security", "priority": "${t.priority}" }`;
+  }).join('\n')}
+
+For each test case add:
+- "steps": array of 2-3 steps
+- "expectedOutcome": string describing success
+
+RULES:
+- Return ONLY the JSON object — no explanation, no extra text before or after
+- Do not add a "topic" field
+- Do not rename any test case
+- totalTests must equal the number of cases
+
+JSON structure:
 {
-  "appDescription": "brief description",
+  "appDescription": "string",
   "totalTests": number,
-  "cases": [
-    {
-      "id": "TC001",
-      "name": "Test case name",
-      "type": "functional|navigation|form|security|performance",
-      "priority": "critical|high|medium|low",
-      "steps": ["step 1", "step 2", "step 3"],
-      "expectedOutcome": "what should happen if the test passes"
-    }
-  ]
-}
-
-Rules:
-- Generate between 5 and 10 test cases
-- Cover: navigation, forms (if any), security basics, performance
-- Be specific to the actual URLs and forms discovered
-- Return ONLY the JSON object, no extra text, no markdown backticks`;
+  "cases": [...]
+}`;
 
   const response = await client.chat.completions.create({
     model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.3,
-    max_tokens: 1500,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a JSON API. You output only valid JSON objects. Never add explanations or text outside the JSON.',
+      },
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.1,
+    max_tokens: 2000,
   });
 
   const raw = response.choices[0].message.content || '';
-  const cleaned = raw.replace(/```json|```/g, '').trim();
-  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-
-  if (!jsonMatch) {
-    console.error('❌ AI response:', raw);
-    throw new Error('AI did not return a JSON object');
-  }
 
   try {
-    const plan = JSON.parse(jsonMatch[0]) as TestPlan;
+    const jsonStr = extractJSON(raw);
+    const plan = JSON.parse(jsonStr) as TestPlan;
+
+    // Strip any extra fields the AI added (like "topic")
+    plan.cases = plan.cases.map(c => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+      priority: c.priority,
+      steps: c.steps,
+      expectedOutcome: c.expectedOutcome,
+    }));
+
+    // Remove form tests if no forms exist
+    if (!hasForms) {
+      plan.cases = plan.cases.filter(c => c.type !== 'form');
+    }
+
+    // Ensure mandatory security tests are present — inject if AI dropped any
+    for (const mandatory of MANDATORY_SECURITY_TESTS) {
+      if (!plan.cases.find(c => c.name === mandatory.name)) {
+        console.warn(`⚠ Injecting missing security test: "${mandatory.name}"`);
+        plan.cases.push({
+          id: `TC${String(plan.cases.length + 1).padStart(3, '0')}`,
+          name: mandatory.name,
+          type: 'security',
+          priority: mandatory.priority as 'critical' | 'high',
+          steps: ['Navigate to the target URL', 'Inspect response headers and security configuration'],
+          expectedOutcome: `${mandatory.name} passes all checks`,
+        });
+      }
+    }
+
+    plan.totalTests = plan.cases.length;
+
+    // Log distribution
+    const typeCounts = plan.cases.reduce((acc, c) => {
+      acc[c.type] = (acc[c.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log('📋 Test type distribution:', typeCounts);
+
     return plan;
+
   } catch (err) {
-    console.error('❌ AI returned invalid JSON:', jsonMatch[0]);
-    throw new Error('AI engine failed to return valid test plan JSON');
+    console.error('❌ Raw AI response:', raw);
+    throw new Error(`AI engine failed to parse test plan: ${(err as Error).message}`);
   }
 }
