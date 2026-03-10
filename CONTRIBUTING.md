@@ -114,3 +114,40 @@ Follow the README Getting Started section exactly. If something doesn't work, ch
 - Check existing GitHub Issues before asking
 - If stuck for more than 30 minutes, ask in the team chat
 - Never merge something you don't fully understand
+
+---
+
+## Scripts Reference
+
+Run all of these from the **root** of the repository:
+
+| Command | When to use |
+|---|---|
+| `pnpm run type-check` | Before every commit — checks all packages |
+| `pnpm run check:all` | Before opening a PR — full type check + build |
+| `pnpm run build` | Verify everything compiles to dist/ |
+| `pnpm run dev` | Local development — starts all watchers |
+
+### Single package checks
+
+If you're only working on one package, run its check directly to save time:
+```bash
+# Only check the package you're working on
+pnpm run type-check --filter @qa-detective/executor
+
+# Check everything once you're done
+pnpm run type-check
+```
+
+### Pre-PR checklist — run these in order
+```bash
+# 1. Type check everything
+pnpm run type-check
+
+# 2. Make sure it builds
+pnpm run build
+
+# 3. If both pass — open your PR
+```
+
+If either command fails, fix the errors before opening the PR. The CI will catch the same errors and block the merge anyway — better to catch them locally first.

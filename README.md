@@ -444,3 +444,31 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 ## License
 
 MIT — see [LICENSE](LICENSE) for details.
+
+---
+
+## Scripts
+
+All scripts run from the **root** of the repository.
+
+| Command | What it does |
+|---|---|
+| `pnpm run type-check` | Type check all packages at once via Turborepo |
+| `pnpm run check:all` | Type check + build all packages |
+| `pnpm run build` | Build all packages |
+| `pnpm run dev` | Start all packages in dev/watch mode |
+| `pnpm run lint` | Lint all packages |
+
+### Run a single package only
+```bash
+pnpm run type-check --filter @qa-detective/executor
+pnpm run type-check --filter @qa-detective/crawler
+pnpm run type-check --filter @qa-detective/api
+```
+
+### Before every PR — run this
+```bash
+pnpm run type-check
+```
+
+All checks must pass before opening a pull request.
