@@ -42,23 +42,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type check — shared
-        run: cd packages/shared && npx tsc --noEmit
-
-      - name: Type check — crawler
-        run: cd packages/crawler && npx tsc --noEmit
-
-      - name: Type check — ai-engine
-        run: cd packages/ai-engine && npx tsc --noEmit
-
-      - name: Type check — executor
-        run: cd packages/executor && npx tsc --noEmit
-
-      - name: Type check — reporter
-        run: cd packages/reporter && npx tsc --noEmit
-
-      - name: Type check — api
-        run: cd apps/api && npx tsc --noEmit
+      - name: Type check all packages
+        run: pnpm run type-check
 
   build:
     name: Build Check
@@ -171,10 +156,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Test database connection
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgresql://admin:testpassword123@localhost:5432/qa_detective_test
         run: |
           node -e "
           const { Pool } = require('pg');
-          const pool = new Pool({ connectionString: 'postgresql://admin:testpassword123@localhost:5432/qa_detective_test' });
+          const pool = new Pool({ connectionString: process.env.DATABASE_URL });
           pool.query('SELECT 1').then(() => {
             console.log('✅ Database connection successful');
             pool.end();
@@ -185,6 +173,7 @@ jobs:
           "
 
       - name: Test health endpoint
+        working-directory: apps/api
         env:
           DATABASE_URL: postgresql://admin:testpassword123@localhost:5432/qa_detective_test
           DB_PASSWORD: testpassword123
@@ -192,7 +181,6 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           API_PORT: 3001
         run: |
-          cd apps/api
           npx tsx src/index.ts &
           sleep 8
           curl -f http://localhost:3001/health || exit 1
