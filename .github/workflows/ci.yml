@@ -1,0 +1,203 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── JOB 1: LINT & TYPE CHECK ─────────────────────────────
+  lint-and-type-check:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Get pnpm store path
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check all packages
+        run: |
+          cd packages/shared && npx tsc --noEmit
+          cd ../crawler && npx tsc --noEmit
+          cd ../ai-engine && npx tsc --noEmit
+          cd ../executor && npx tsc --noEmit
+          cd ../reporter && npx tsc --noEmit
+          cd ../../apps/api && npx tsc --noEmit
+
+  # ─── JOB 2: BUILD CHECK ───────────────────────────────────
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    needs: lint-and-type-check
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Get pnpm store path
+        id: pnpm-cache
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify API compiles
+        run: cd apps/api && npx tsc --noEmit
+
+  # ─── JOB 3: CRAWLER SMOKE TEST ────────────────────────────
+  crawler-test:
+    name: Crawler Smoke Test
+    runs-on: ubuntu-latest
+    needs: lint-and-type-check
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: cd packages/crawler && npx playwright install chromium --with-deps
+
+      - name: Run crawler smoke test
+        run: cd packages/crawler && npx tsx src/test-crawl.ts
+        timeout-minutes: 2
+
+  # ─── JOB 4: API INTEGRATION TEST ──────────────────────────
+  api-test:
+    name: API Integration Test
+    runs-on: ubuntu-latest
+    needs: build
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: qa_detective_test
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: testpassword123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test database connection
+        env:
+          DATABASE_URL: postgresql://admin:testpassword123@localhost:5432/qa_detective_test
+          DB_PASSWORD: testpassword123
+          REDIS_URL: redis://localhost:6379
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          API_PORT: 3001
+        run: |
+          cd apps/api
+          node -e "
+            const { Pool } = require('pg');
+            const pool = new Pool({ connectionString: '$DATABASE_URL' });
+            pool.query('SELECT 1').then(() => {
+              console.log('✅ Database connection successful');
+              pool.end();
+            }).catch(err => {
+              console.error('❌ Database connection failed:', err.message);
+              process.exit(1);
+            });
+          "
+
+      - name: Test health endpoint
+        env:
+          DATABASE_URL: postgresql://admin:testpassword123@localhost:5432/qa_detective_test
+          DB_PASSWORD: testpassword123
+          REDIS_URL: redis://localhost:6379
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          API_PORT: 3001
+        run: |
+          cd apps/api
+          npx tsx src/index.ts &
+          sleep 8
+          curl -f http://localhost:3001/health || exit 1
+          echo "✅ Health endpoint responding"
+          kill %1 2>/dev/null || true
+        timeout-minutes: 3

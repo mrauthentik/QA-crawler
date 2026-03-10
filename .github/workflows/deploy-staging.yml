@@ -1,0 +1,56 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check before deploying
+        run: |
+          cd apps/api && npx tsc --noEmit
+          echo "✅ Type check passed"
+
+      - name: Notify deployment starting
+        run: echo "🚀 Deploying QA Detective to staging..."
+
+      # ── Uncomment when you have a server ──────────────────
+      # - name: Deploy via SSH
+      #   uses: appleboy/ssh-action@v1
+      #   with:
+      #     host: ${{ secrets.SERVER_HOST }}
+      #     username: ${{ secrets.SERVER_USER }}
+      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     script: |
+      #       cd /app/qa-detective
+      #       git pull origin main
+      #       pnpm install --frozen-lockfile
+      #       docker compose -f infra/docker-compose.yml \
+      #         --env-file .env up -d --build
+      #       echo "✅ Deployed successfully"
+
+      - name: Deployment complete
+        run: |
+          echo "✅ Deploy workflow complete"
+          echo "📋 Commit: ${{ github.sha }}"
+          echo "👤 Triggered by: ${{ github.actor }}"
