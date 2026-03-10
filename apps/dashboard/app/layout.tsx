@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body suppressHydrationWarning>
         <div style={{ position: 'relative', zIndex: 1 }}>
           <header className="site-header">
             <a href="/" className="site-logo">

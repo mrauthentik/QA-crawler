@@ -23,8 +23,15 @@ export default function RunsPage() {
   useEffect(() => {
     fetch(`${API_URL}/api/runs`)
       .then(r => r.json())
-      .then(data => { setRuns(data); setLoading(false); })
-      .catch(() => { setError('Could not load runs. Is the API running?'); setLoading(false); });
+      .then(data => {
+        // API returns { runs: [...] } or plain array
+        setRuns(Array.isArray(data) ? data : (data.runs ?? []));
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Could not load runs. Is the API running?');
+        setLoading(false);
+      });
   }, []);
 
   const gradeColor: Record<string, string> = {
@@ -34,7 +41,6 @@ export default function RunsPage() {
 
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '48px 32px' }}>
-
       <div style={{ marginBottom: '40px' }}>
         <div className="font-mono" style={{
           fontSize: '0.65rem', letterSpacing: '0.2em',
@@ -80,31 +86,29 @@ export default function RunsPage() {
             <a key={run.id} href={`/runs/${run.id}`} style={{
               background: 'var(--bg-card)', padding: '20px 24px',
               display: 'grid', gridTemplateColumns: '1fr auto',
-              gap: '16px', alignItems: 'center',
-              textDecoration: 'none', transition: 'background 0.15s',
+              gap: '16px', alignItems: 'center', textDecoration: 'none', transition: 'background 0.15s',
             }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-elevated)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-card)')}
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                  <span className={`badge badge-${run.status}`}>{run.status.toUpperCase()}</span>
+                  <span className={`badge badge-${run.status ?? 'pending'}`}>
+                    {(run.status ?? 'pending').toUpperCase()}
+                  </span>
                   <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
                     {new Date(run.created_at).toLocaleString()}
                   </span>
                 </div>
                 <div style={{
-                  fontFamily: 'IBM Plex Sans, sans-serif',
-                  fontSize: '0.95rem', fontWeight: 500,
-                  color: 'var(--text-primary)', marginBottom: '4px',
-                  wordBreak: 'break-all',
+                  fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.95rem', fontWeight: 500,
+                  color: 'var(--text-primary)', marginBottom: '4px', wordBreak: 'break-all',
                 }}>
                   {run.url.replace(/^https?:\/\//, '')}
                 </div>
                 <div className="font-mono" style={{
                   fontSize: '0.72rem', color: 'var(--text-muted)',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  maxWidth: '500px',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '500px',
                 }}>
                   {run.description}
                 </div>
@@ -119,14 +123,12 @@ export default function RunsPage() {
                     {run.grade.charAt(0)}
                   </span>
                 )}
-                {run.score !== undefined && (
+                {run.score !== undefined && run.score !== null && (
                   <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
                     {run.score}/100
                   </span>
                 )}
-                <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
-                  →
-                </span>
+                <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>→</span>
               </div>
             </a>
           ))}
