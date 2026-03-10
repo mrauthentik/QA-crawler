@@ -10,7 +10,7 @@ async function checkSecurityHeaders(page: Page, baseUrl: string) {
   const headers = response?.headers() ?? {};
   const issues: string[] = [];
 
-  const required: Record<string, { description: string; severity: 'critical' | 'high' | 'medium' }> = {
+  const required: Record<string, { description: string; severity: 'critical' | 'high' | 'medium' | 'low' }> = {
     'x-content-type-options':    { description: 'Prevents MIME type sniffing attacks', severity: 'high' },
     'x-frame-options':           { description: 'Prevents clickjacking attacks', severity: 'high' },
     'strict-transport-security': { description: 'Enforces HTTPS connections (HSTS)', severity: 'critical' },
@@ -168,7 +168,7 @@ async function checkSensitiveDataExposure(page: Page, baseUrl: string) {
   await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 30000 });
   const bodyText = await page.content();
 
-  const patterns: Array<{ pattern: RegExp; label: string; severity: 'critical' | 'high' | 'medium' }> = [
+  const patterns: Array<{ pattern: RegExp; label: string; severity: 'critical' | 'high' | 'medium' | 'low' }> = [
     { pattern: /api[_-]?key\s*[:=]\s*['"][a-zA-Z0-9]{10,}/gi,        label: 'API key exposed in source',       severity: 'critical' },
     { pattern: /password\s*[:=]\s*['"][^'"]{3,}/gi,                   label: 'Password exposed in source',      severity: 'critical' },
     { pattern: /secret\s*[:=]\s*['"][^'"]{5,}/gi,                     label: 'Secret exposed in source',        severity: 'critical' },
