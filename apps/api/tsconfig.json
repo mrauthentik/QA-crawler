@@ -2,15 +2,20 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
+    "baseUrl": ".",
+    "paths": {
+      "@qa-detective/shared": ["../../packages/shared/src/index.ts"],
+      "@qa-detective/crawler": ["../../packages/crawler/src/index.ts"],
+      "@qa-detective/ai-engine": ["../../packages/ai-engine/src/index.ts"],
+      "@qa-detective/executor": ["../../packages/executor/src/index.ts"],
+      "@qa-detective/reporter": ["../../packages/reporter/src/index.ts"]
+    }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../../packages/*/src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

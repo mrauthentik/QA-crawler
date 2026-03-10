@@ -9,6 +9,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@qa-detective/shared": "workspace:*",
     "openai": "^4.47.0",
     "dotenv": "^16.4.0"
   },

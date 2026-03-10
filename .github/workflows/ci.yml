@@ -11,9 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ─── JOB 1: LINT & TYPE CHECK ─────────────────────────────
-  lint-and-type-check:
-    name: Lint & Type Check
+  type-check:
+    name: Type Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -43,20 +42,28 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type check all packages
-        run: |
-          cd packages/shared && npx tsc --noEmit
-          cd ../crawler && npx tsc --noEmit
-          cd ../ai-engine && npx tsc --noEmit
-          cd ../executor && npx tsc --noEmit
-          cd ../reporter && npx tsc --noEmit
-          cd ../../apps/api && npx tsc --noEmit
+      - name: Type check — shared
+        run: cd packages/shared && npx tsc --noEmit
 
-  # ─── JOB 2: BUILD CHECK ───────────────────────────────────
+      - name: Type check — crawler
+        run: cd packages/crawler && npx tsc --noEmit
+
+      - name: Type check — ai-engine
+        run: cd packages/ai-engine && npx tsc --noEmit
+
+      - name: Type check — executor
+        run: cd packages/executor && npx tsc --noEmit
+
+      - name: Type check — reporter
+        run: cd packages/reporter && npx tsc --noEmit
+
+      - name: Type check — api
+        run: cd apps/api && npx tsc --noEmit
+
   build:
     name: Build Check
     runs-on: ubuntu-latest
-    needs: lint-and-type-check
+    needs: type-check
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,11 +95,10 @@ jobs:
       - name: Verify API compiles
         run: cd apps/api && npx tsc --noEmit
 
-  # ─── JOB 3: CRAWLER SMOKE TEST ────────────────────────────
   crawler-test:
     name: Crawler Smoke Test
     runs-on: ubuntu-latest
-    needs: lint-and-type-check
+    needs: type-check
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -117,7 +123,6 @@ jobs:
         run: cd packages/crawler && npx tsx src/test-crawl.ts
         timeout-minutes: 2
 
-  # ─── JOB 4: API INTEGRATION TEST ──────────────────────────
   api-test:
     name: API Integration Test
     runs-on: ubuntu-latest
@@ -166,24 +171,17 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Test database connection
-        env:
-          DATABASE_URL: postgresql://admin:testpassword123@localhost:5432/qa_detective_test
-          DB_PASSWORD: testpassword123
-          REDIS_URL: redis://localhost:6379
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          API_PORT: 3001
         run: |
-          cd apps/api
           node -e "
-            const { Pool } = require('pg');
-            const pool = new Pool({ connectionString: '$DATABASE_URL' });
-            pool.query('SELECT 1').then(() => {
-              console.log('✅ Database connection successful');
-              pool.end();
-            }).catch(err => {
-              console.error('❌ Database connection failed:', err.message);
-              process.exit(1);
-            });
+          const { Pool } = require('pg');
+          const pool = new Pool({ connectionString: 'postgresql://admin:testpassword123@localhost:5432/qa_detective_test' });
+          pool.query('SELECT 1').then(() => {
+            console.log('✅ Database connection successful');
+            pool.end();
+          }).catch(err => {
+            console.error('❌ Failed:', err.message);
+            process.exit(1);
+          });
           "
 
       - name: Test health endpoint

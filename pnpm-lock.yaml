@@ -110,6 +110,9 @@ importers:
 
   packages/executor:
     dependencies:
+      '@qa-detective/shared':
+        specifier: workspace:*
+        version: link:../shared
       playwright:
         specifier: ^1.44.0
         version: 1.58.2
@@ -126,6 +129,9 @@ importers:
 
   packages/reporter:
     dependencies:
+      '@qa-detective/shared':
+        specifier: workspace:*
+        version: link:../shared
       dotenv:
         specifier: ^16.4.0
         version: 16.6.1

@@ -9,6 +9,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@qa-detective/shared": "workspace:*",
     "playwright": "^1.44.0"
   },
   "devDependencies": {

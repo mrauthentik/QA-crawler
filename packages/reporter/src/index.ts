@@ -4,56 +4,14 @@ import { resolve } from 'path';
 dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
 import OpenAI from 'openai';
+import type { TestResult, ExecutionResult, DetectiveReport, Finding, Severity } from '@qa-detective/shared';
+
+export type { TestResult, ExecutionResult, DetectiveReport, Finding } from '@qa-detective/shared';
 
 const client = new OpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
   apiKey: process.env.GROQ_API_KEY,
 });
-
-export type TestStatus = 'passed' | 'failed' | 'error';
-export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'info';
-
-export interface TestResult {
-  id: string;
-  name: string;
-  status: TestStatus;
-  severity: Severity;
-  message: string;
-  duration: number;
-  screenshot?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface ExecutionResult {
-  url: string;
-  totalTests: number;
-  passed: number;
-  failed: number;
-  errors: number;
-  duration: number;
-  results: TestResult[];
-}
-
-export interface DetectiveReport {
-  url: string;
-  score: number;
-  grade: string;
-  summary: string;
-  findings: Finding[];
-  recommendations: string[];
-  generatedAt: string;
-}
-
-export interface Finding {
-  testId: string;
-  testName: string;
-  status: TestStatus;
-  severity: Severity;
-  what: string;
-  why: string;
-  how: string;
-  screenshot?: string;
-}
 
 function calculateScore(results: TestResult[]): number {
   if (results.length === 0) return 0;
@@ -147,7 +105,6 @@ Respond ONLY with this exact JSON structure, no extra text:
 
   const parsed = JSON.parse(jsonMatch[0]);
 
-  // Attach screenshots to findings
   const findings = parsed.findings.map((f: Finding) => {
     const original = results.find(r => r.id === f.testId);
     return { ...f, screenshot: original?.screenshot };
