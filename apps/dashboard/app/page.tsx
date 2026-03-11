@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -13,6 +13,12 @@ const EXAMPLE_URLS = [
 
 export default function HomePage() {
   const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('qa_token');
+    if (!token) router.push('/login');
+  }, [router]);
+
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
