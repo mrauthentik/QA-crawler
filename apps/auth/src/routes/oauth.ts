@@ -25,7 +25,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
         const user = await upsertGoogleUser({
           email,
           name: profile.displayName,
-          google_id: profile.id,
+          googleId: profile.id,
           avatar: profile.photos?.[0]?.value,
         });
         return done(null, user);
