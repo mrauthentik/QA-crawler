@@ -163,3 +163,11 @@ export async function saveFindings(
     [JSON.stringify(findings), runId]
   );
 }
+
+export async function deleteTestRun(id: string): Promise<boolean> {
+  const result = await pool.query(
+    'DELETE FROM test_runs WHERE id = $1 RETURNING id',
+    [id]
+  );
+  return result.rowCount !== null && result.rowCount > 0;
+}
