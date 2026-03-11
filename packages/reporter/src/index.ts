@@ -59,13 +59,10 @@ PASSED TESTS (${passedTests.length}):
 ${passedTests.map(t => `- ${t.id}: ${t.name} (${t.duration}ms)`).join('\n')}
 
 FAILED/ERROR TESTS (${failedTests.length}):
-${failedTests.map(t => `- ${t.id}: ${t.name}
-  Status: ${t.status}
-  Severity: ${t.severity}
-  Message: ${t.message}`).join('\n\n')}
+${failedTests.map(t => `- ${t.id} [${t.severity.toUpperCase()}]: ${t.name} — ${t.message.slice(0, 120)}`).join('\n')}
 
-For each failed/error test, provide a detective-style analysis.
-Also write an overall summary and 3-5 actionable recommendations.
+For each failed/error test write a concise finding (max 60 words per field).
+Write a 2-sentence summary and exactly 3 recommendations (max 20 words each).
 
 Respond ONLY with this exact JSON structure, no extra text:
 {
@@ -90,9 +87,15 @@ Respond ONLY with this exact JSON structure, no extra text:
 
   const response = await client.chat.completions.create({
     model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.3,
-    max_tokens: 2000,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a JSON API. Output only valid JSON. Be concise — keep each what/why/how field under 60 words. Never truncate the JSON.',
+      },
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.2,
+    max_tokens: 4000,
   });
 
   const raw = response.choices[0].message.content || '';
@@ -103,7 +106,11 @@ Respond ONLY with this exact JSON structure, no extra text:
     throw new Error('AI reporter did not return valid JSON');
   }
 
-  const parsed = JSON.parse(jsonMatch[0]);
+  // Sanitise AI response before parsing — remove bad escape sequences
+  const sanitised = jsonMatch[0]
+    .replace(/\\(?!["\\/bfnrtu])/g, '\\\\')  // fix bad backslashes
+    .replace(/[\x00-\x1F\x7F]/g, ' ');             // remove control characters
+  const parsed = JSON.parse(sanitised);
 
   const findings = parsed.findings.map((f: Finding) => {
     const original = results.find(r => r.id === f.testId);

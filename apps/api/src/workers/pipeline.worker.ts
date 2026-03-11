@@ -3,6 +3,8 @@ import { resolve } from 'path'
 dotenv.config({path: resolve(__dirname, '../../../.env')})
 
 import { Worker } from 'bullmq'
+import fs from 'fs'
+import path from 'path'
 import { crawlPage } from '@qa-detective/crawler';
 import { generateTestPlan } from '@qa-detective/ai-engine';
 import { executeTestPlan } from '@qa-detective/executor';
@@ -25,6 +27,12 @@ export const pipelineWorker = new Worker(
         const { runId, url, description } = job.data;
         console.log(`\n🔄 Processing job ${job.id} for run ${runId}`);
 
+        // Ensure screenshots dir exists
+        const SCREENSHOTS_DIR = path.join(__dirname, '../../../screenshots');
+        if (!fs.existsSync(SCREENSHOTS_DIR)) {
+          fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+        }
+
         try{
             // Update status to running
             await updateTestRun(runId, {status: 'running'})
@@ -42,7 +50,7 @@ export const pipelineWorker = new Worker(
 
       // Phase 3: Execute tests
       console.log('🔬 Executing tests...');
-      const executionResult = await executeTestPlan(url, testPlan.cases);
+      const executionResult = await executeTestPlan(url, testPlan.cases, SCREENSHOTS_DIR);
       await job.updateProgress(75);
 
       // Phase 4: Generate report
@@ -66,7 +74,9 @@ export const pipelineWorker = new Worker(
         severity: r.severity,
         message: r.message,
         duration: r.duration,
-        screenshot: r.screenshot,
+        screenshot: r.screenshot
+          ? `/screenshots/${path.basename(r.screenshot)}`
+          : undefined,
       })));
 
       await saveRecommendations(runId, report.recommendations)
@@ -78,7 +88,7 @@ export const pipelineWorker = new Worker(
         what: f.what,
         why: f.why,
         how: f.how,
-        screenshot: f.screenshot,
+        screenshot: f.screenshot ? `/screenshots/${path.basename(f.screenshot)}` : undefined,
       })))
       await job.updateProgress(100)
         console.log(`✅ Run ${runId} completed. Score: ${report.score}/100`);

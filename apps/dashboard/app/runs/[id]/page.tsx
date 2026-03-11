@@ -259,9 +259,26 @@ export default function RunPage() {
                       </div>
                     ))}
                     {finding.screenshot && (
-                      <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
-                        📸 {finding.screenshot}
-                      </span>
+                      <div style={{ marginTop: '12px' }}>
+                        <div className="font-mono" style={{
+                          fontSize: '0.65rem', color: 'var(--text-muted)',
+                          letterSpacing: '0.08em', marginBottom: '8px'
+                        }}>
+                          📸 SCREENSHOT
+                        </div>
+                        <img
+                          src={`${API_URL}${finding.screenshot}`}
+                          alt={`Screenshot for ${finding.testName}`}
+                          style={{
+                            width: '100%', maxWidth: '600px',
+                            border: '1px solid var(--border)',
+                            borderRadius: '2px',
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>

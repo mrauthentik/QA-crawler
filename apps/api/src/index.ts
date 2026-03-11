@@ -3,14 +3,25 @@ import { resolve } from 'path';
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
 import { initDb } from './db/index';
 import runsRouter from './routes/runs';
 import { pipelineWorker } from './workers/pipeline.worker';
 
 const app = express();
+export { app };
 const PORT = process.env.API_PORT || 3001;
 
 app.use(express.json());
+
+// Screenshots — create dir and serve as static files
+const SCREENSHOTS_DIR = path.join(__dirname, '../../screenshots');
+if (!fs.existsSync(SCREENSHOTS_DIR)) {
+  fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+  console.log('📸 Screenshots directory created:', SCREENSHOTS_DIR);
+}
+app.use('/screenshots', express.static(SCREENSHOTS_DIR));
 
 // CORS for dashboard
 app.use((req, res, next) => {
