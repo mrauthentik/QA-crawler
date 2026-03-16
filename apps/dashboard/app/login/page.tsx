@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Fingerprint } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -85,7 +86,7 @@ export default function LoginPage() {
         borderRadius: '4px',
       }}>
         <div style={{ marginBottom: '32px', textAlign: 'center' as const }}>
-          <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{'🕵️'}</div>
+          <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}><Fingerprint size={32} color='var(--accent-amber)' strokeWidth={1.5} /></div>
           <h1 style={{
             fontSize: '1.4rem',
             letterSpacing: '0.15em',

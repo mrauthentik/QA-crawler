@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, ArrowRight, MoreHorizontal, RotateCcw, Copy, Trash2 } from 'lucide-react';
 import { useAuth } from '@/lib/useAuth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -194,7 +195,7 @@ export default function RunsPage() {
 
       {error && (
         <div className="font-mono" style={{ color: 'var(--accent-red)', fontSize: '0.8rem' }}>
-          {'⚠ '}{error}
+          <AlertTriangle size={14} style={{ display: 'inline', marginRight: '6px' }} />{error}
         </div>
       )}
 
@@ -206,7 +207,7 @@ export default function RunsPage() {
             NO CASES ON FILE
           </div>
           <a href="/" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none' }}>
-            {'→ OPEN FIRST CASE'}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>OPEN FIRST CASE <ArrowRight size={14} /></span>
           </a>
         </div>
       )}
@@ -320,19 +321,22 @@ export default function RunsPage() {
                   >
                     {[
                       {
-                        label: rerunningId === run.id ? 'QUEUING...' : '↺  RE-RUN',
+                        label: rerunningId === run.id ? 'QUEUING...' : 'RE-RUN',
+                        icon: <RotateCcw size={13} />,
                         onClick: () => handleRerun(run),
                         disabled: rerunningId === run.id,
                         color: 'var(--text-primary)',
                       },
                       {
-                        label: '⎘  SHARE LINK',
+                        label: 'SHARE LINK',
+                        icon: <Copy size={13} />,
                         onClick: () => handleShare(run),
                         disabled: false,
                         color: 'var(--text-primary)',
                       },
                       {
-                        label: '✕  DELETE',
+                        label: 'DELETE',
+                        icon: <Trash2 size={13} />,
                         onClick: () => handleDelete(run),
                         disabled: deletingId === run.id,
                         color: 'var(--accent-red)',
@@ -365,7 +369,7 @@ export default function RunsPage() {
                           (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
                         }}
                       >
-                        {action.label}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>{action.icon}{action.label}</span>
                       </button>
                     ))}
                   </div>
@@ -379,7 +383,7 @@ export default function RunsPage() {
 
       <div style={{ marginTop: '32px', textAlign: 'right' as const }}>
         <a href="/" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none' }}>
-          {'→ NEW INVESTIGATION'}
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>NEW INVESTIGATION <ArrowRight size={14} /></span>
         </a>
       </div>
     </div>

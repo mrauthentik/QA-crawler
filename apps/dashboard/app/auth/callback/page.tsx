@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Fingerprint } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function AuthCallbackPage() {
@@ -34,7 +35,7 @@ export default function AuthCallbackPage() {
       justifyContent: 'center', background: 'var(--bg-primary)',
     }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '2rem', marginBottom: '16px' }}>🕵️</div>
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}><Fingerprint size={32} color='var(--accent-amber)' strokeWidth={1.5} /></div>
         <p className="font-mono" style={{
           color: 'var(--accent-amber)', letterSpacing: '0.15em', fontSize: '0.85rem',
         }}>

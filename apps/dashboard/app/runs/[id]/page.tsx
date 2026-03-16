@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { XCircle, AlertOctagon, AlertTriangle, CheckCircle, Info, Check, Camera, Lock, Unlock, Copy, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -41,12 +42,12 @@ interface Run {
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
 
-const SEVERITY_STYLES: Record<string, { color: string; bg: string; border: string; icon: string }> = {
-  critical: { color: 'var(--accent-red)',       bg: 'var(--accent-red-dim)',        border: 'rgba(232,64,64,0.3)',   icon: '🔴' },
-  high:     { color: '#e8944a',                  bg: 'rgba(232,148,74,0.1)',         border: 'rgba(232,148,74,0.3)', icon: '🟠' },
-  medium:   { color: 'var(--accent-amber)',       bg: 'var(--accent-amber-dim)',      border: 'rgba(245,166,35,0.3)', icon: '🟡' },
-  low:      { color: 'var(--accent-green)',       bg: 'var(--accent-green-dim)',      border: 'rgba(61,214,140,0.3)', icon: '🟢' },
-  info:     { color: 'var(--text-secondary)',     bg: 'rgba(85,85,80,0.1)',           border: 'var(--border)',        icon: '⚪' },
+const SEVERITY_STYLES: Record<string, { color: string; bg: string; border: string; icon: React.ReactNode }> = {
+  critical: { color: 'var(--accent-red)',       bg: 'var(--accent-red-dim)',        border: 'rgba(232,64,64,0.3)',   icon: <XCircle size={14} color='var(--accent-red)' /> },
+  high:     { color: '#e8944a',                  bg: 'rgba(232,148,74,0.1)',         border: 'rgba(232,148,74,0.3)', icon: <AlertOctagon size={14} color='#e8944a' /> },
+  medium:   { color: 'var(--accent-amber)',       bg: 'var(--accent-amber-dim)',      border: 'rgba(245,166,35,0.3)', icon: <AlertTriangle size={14} color='var(--accent-amber)' /> },
+  low:      { color: 'var(--accent-green)',       bg: 'var(--accent-green-dim)',      border: 'rgba(61,214,140,0.3)', icon: <CheckCircle size={14} color='var(--accent-green)' /> },
+  info:     { color: 'var(--text-secondary)',     bg: 'rgba(85,85,80,0.1)',           border: 'var(--border)',        icon: <Info size={14} color='var(--text-secondary)' /> },
 };
 
 function GradeDisplay({ grade, score }: { grade: string; score: number }) {
@@ -325,7 +326,7 @@ export default function RunPage() {
             {passed.map((result, i) => (
               <div key={result.test_id ?? i} style={{ background: 'var(--bg-card)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ color: 'var(--accent-green)', fontSize: '0.8rem' }}>✓</span>
+                  <Check size={14} color='var(--accent-green)' strokeWidth={2.5} />
                   <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{result.name}</span>
                 </div>
                 <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{result.duration}ms</span>
