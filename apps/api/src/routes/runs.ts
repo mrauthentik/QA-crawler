@@ -18,7 +18,7 @@ const connection = {
 const pipelineQueue = new Queue('pipeline', { connection });
 
 // ─── POST /api/runs ───────────────────────────────────────────────────────────
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { url, description } = req.body;
 
@@ -55,7 +55,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // ─── GET /api/runs ────────────────────────────────────────────────────────────
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const runs = await getAllTestRuns(req.userId);
     return res.json({ runs });
