@@ -1,10 +1,11 @@
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
 import { Queue } from 'bullmq';
 import {
   createTestRun,
   getTestRun,
   getAllTestRuns,
   deleteTestRun,
+  toggleRunVisibility,
 } from '../db/index';
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 
@@ -66,14 +67,55 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // ─── GET /api/runs/:id ────────────────────────────────────────────────────────
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+router.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const run = await getTestRun(req.params.id);
     if (!run) return res.status(404).json({ error: 'Run not found' });
-    return res.json({ run });
+
+    const isOwner = req.userId && req.userId === run.user_id;
+
+    // Private run — only owner can view
+    if (!run.is_public && !isOwner) {
+      return res.status(403).json({
+        error: 'This investigation is private',
+        code: 'PRIVATE_RUN',
+      });
+    }
+
+    return res.json({ run, isOwner: !!isOwner });
   } catch (err) {
     console.error('Error fetching run:', err);
     return res.status(500).json({ error: 'Failed to fetch run' });
+  }
+});
+
+// ─── PATCH /api/runs/:id/visibility ──────────────────────────────────────────
+router.patch('/:id/visibility', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { isPublic } = req.body;
+
+    if (typeof isPublic !== 'boolean') {
+      return res.status(400).json({ error: 'isPublic must be a boolean' });
+    }
+
+    const run = await getTestRun(req.params.id);
+    if (!run) return res.status(404).json({ error: 'Run not found' });
+
+    if (run.user_id !== req.userId) {
+      return res.status(403).json({ error: 'You do not have permission to update this run' });
+    }
+
+    await toggleRunVisibility(req.params.id, isPublic);
+
+    console.log(`🔒 Run ${req.params.id} set to ${isPublic ? 'public' : 'private'} by ${req.userId}`);
+
+    return res.json({
+      message: `Run is now ${isPublic ? 'public' : 'private'}`,
+      isPublic,
+    });
+  } catch (err) {
+    console.error('Error updating visibility:', err);
+    return res.status(500).json({ error: 'Failed to update visibility' });
   }
 });
 

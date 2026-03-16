@@ -179,3 +179,14 @@ export async function deleteTestRun(id: string): Promise<boolean> {
   );
   return result.rowCount !== null && result.rowCount > 0;
 }
+
+export async function toggleRunVisibility(
+  id: string,
+  isPublic: boolean
+): Promise<boolean> {
+  const result = await pool.query(
+    'UPDATE test_runs SET is_public = $1 WHERE id = $2 RETURNING id',
+    [isPublic, id]
+  );
+  return result.rowCount !== null && result.rowCount > 0;
+}

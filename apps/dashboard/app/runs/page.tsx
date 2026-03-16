@@ -215,7 +215,7 @@ export default function RunsPage() {
         <div style={{
           display: 'flex', flexDirection: 'column' as const, gap: '1px',
           background: 'var(--border)', border: '1px solid var(--border)',
-          borderRadius: '2px', overflow: 'hidden',
+          borderRadius: '2px',
         }}>
           {runs.map(run => (
             <div key={run.id} style={{
