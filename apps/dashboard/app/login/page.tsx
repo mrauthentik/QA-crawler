@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -8,10 +9,18 @@ const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3002';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [notice, setNotice] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    if (reason === 'session_expired') setNotice('Your session has expired. Please sign in again.');
+    if (reason === 'unauthenticated') setNotice('Please sign in to continue.');
+  }, [searchParams]);
 
   async function handleLogin() {
     setError('');
@@ -90,6 +99,17 @@ export default function LoginPage() {
             Sign in to your account
           </p>
         </div>
+
+        {notice && (
+          <div style={{
+            padding: '12px 16px', marginBottom: '20px',
+            background: 'rgba(245,158,11,0.1)',
+            border: '1px solid rgba(245,158,11,0.3)',
+            borderRadius: '2px', color: 'var(--accent-amber)', fontSize: '0.85rem',
+          }}>
+            {notice}
+          </div>
+        )}
 
         {error && (
           <div style={{

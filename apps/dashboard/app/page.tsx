@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/useAuth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -13,11 +14,7 @@ const EXAMPLE_URLS = [
 
 export default function HomePage() {
   const router = useRouter();
-
-  useEffect(() => {
-    const token = localStorage.getItem('qa_token');
-    if (!token) router.push('/login');
-  }, [router]);
+  const { authHeaders } = useAuth();
 
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
@@ -43,7 +40,7 @@ export default function HomePage() {
     try {
       const res = await fetch(`${API_URL}/api/runs`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({
           url: url.trim(),
           description: description.trim() || `Automated QA investigation of ${url.trim()}`,
