@@ -43,7 +43,10 @@ export default function HomePage() {
     try {
       const res = await fetch(`${API_URL}/api/runs`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('qa_token') ?? ''}`,
+        },
         body: JSON.stringify({
           url: url.trim(),
           description: description.trim() || `Automated QA investigation of ${url.trim()}`,

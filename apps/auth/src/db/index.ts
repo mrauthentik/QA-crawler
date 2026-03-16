@@ -108,8 +108,8 @@ export async function upsertGoogleUser(data:{
                         VALUES ($1, $2, $3, $4)
                         ON CONFLICT (email) DO UPDATE SET
                         google_id= EXCLUDED.google_id,
-                        avatar = EXCLUDED.avatar
-                        update_at = NOW()
+                        avatar = EXCLUDED.avatar,
+                        updated_at = NOW()
                         RETURNING *`
       const result = await pool.query(dbQuery, [data.email, data.name, data.googleId, data.avatar ?? null])
       return result.rows[0]
