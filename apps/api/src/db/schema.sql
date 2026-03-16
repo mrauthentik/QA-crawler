@@ -35,3 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_test_runs_status ON test_runs(status);
 
 -- Add findings column to store WHAT/WHY/FIX analysis
 ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS findings JSONB DEFAULT '[]';
+
+-- Tie runs to users
+ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS user_id UUID;
+CREATE INDEX IF NOT EXISTS idx_test_runs_user_id ON test_runs(user_id);

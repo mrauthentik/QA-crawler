@@ -43,12 +43,13 @@ export async function initDb(): Promise<void> {
 
 export async function createTestRun(
   url: string,
-  description: string
+  description: string,
+  userId?: string
 ): Promise<string> {
   const { rows } = await pool.query(
-    `INSERT INTO test_runs (url, description, status)
-     VALUES ($1, $2, 'pending') RETURNING id`,
-    [url, description]
+    `INSERT INTO test_runs (url, description, status, user_id)
+     VALUES ($1, $2, 'pending', $3) RETURNING id`,
+    [url, description, userId ?? null]
   );
   return rows[0].id;
 }
@@ -138,7 +139,14 @@ export async function getTestRun(id: string) {
   };
 }
 
-export async function getAllTestRuns() {
+export async function getAllTestRuns(userId?: string) {
+  if (userId) {
+    const { rows } = await pool.query(
+      'SELECT * FROM test_runs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
+      [userId]
+    );
+    return rows;
+  }
   const { rows } = await pool.query(
     'SELECT * FROM test_runs ORDER BY created_at DESC LIMIT 50'
   );
@@ -162,4 +170,12 @@ export async function saveFindings(
     `UPDATE test_runs SET findings = $1 WHERE id = $2`,
     [JSON.stringify(findings), runId]
   );
+}
+
+export async function deleteTestRun(id: string): Promise<boolean> {
+  const result = await pool.query(
+    'DELETE FROM test_runs WHERE id = $1 RETURNING id',
+    [id]
+  );
+  return result.rowCount !== null && result.rowCount > 0;
 }
