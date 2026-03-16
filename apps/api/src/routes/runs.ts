@@ -1,4 +1,5 @@
-import { Router, Response } from 'express';
+
+import { Router, Request, Response } from 'express';
 import { Queue } from 'bullmq';
 import {
   createTestRun,
@@ -6,7 +7,6 @@ import {
   getAllTestRuns,
   deleteTestRun,
 } from '../db/index';
-import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ const connection = {
 const pipelineQueue = new Queue('pipeline', { connection });
 
 // ─── POST /api/runs ───────────────────────────────────────────────────────────
-router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { url, description } = req.body;
 
@@ -32,7 +32,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
 
-    const runId = await createTestRun(url, description, req.userId);
+    const runId = await createTestRun(url, description);
 
     await pipelineQueue.add(
       'run-pipeline',
@@ -40,7 +40,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       { attempts: 2, backoff: { type: 'exponential', delay: 5000 } }
     );
 
-    console.log(`📥 New run queued: ${runId} for ${url} by user ${req.userId}`);
+    console.log(`📥 New run queued: ${runId} for ${url}`);
 
     return res.status(202).json({
       message: 'Test run queued successfully',
@@ -55,8 +55,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // ─── GET /api/runs ────────────────────────────────────────────────────────────
-// Uses optionalAuth — authenticated users see only their runs, unauthenticated see all
-router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     const runs = await getAllTestRuns(req.userId);
     return res.json({ runs });
@@ -67,8 +66,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // ─── GET /api/runs/:id ────────────────────────────────────────────────────────
-// Public — anyone with the run ID can view results (for sharing)
-router.get('/:id', async (req: AuthRequest, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
     const run = await getTestRun(req.params.id);
     if (!run) return res.status(404).json({ error: 'Run not found' });
@@ -80,20 +78,12 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 });
 
 // ─── DELETE /api/runs/:id ─────────────────────────────────────────────────────
-router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    // Verify ownership before deleting
-    const run = await getTestRun(req.params.id);
-    if (!run) return res.status(404).json({ error: 'Run not found' });
-
-    if (run.user_id && run.user_id !== req.userId) {
-      return res.status(403).json({ error: 'You do not have permission to delete this run' });
-    }
-
     const deleted = await deleteTestRun(req.params.id);
     if (!deleted) return res.status(404).json({ error: 'Run not found' });
 
-    console.log(`🗑  Run deleted: ${req.params.id} by user ${req.userId}`);
+    console.log(`🗑  Run deleted: ${req.params.id}`);
     return res.json({ message: 'Run deleted successfully' });
   } catch (err) {
     console.error('Error deleting run:', err);
@@ -102,17 +92,12 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // ─── POST /api/runs/:id/rerun ─────────────────────────────────────────────────
-router.post('/:id/rerun', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/:id/rerun', async (req: Request, res: Response) => {
   try {
     const original = await getTestRun(req.params.id);
     if (!original) return res.status(404).json({ error: 'Run not found' });
 
-    // Verify ownership
-    if (original.user_id && original.user_id !== req.userId) {
-      return res.status(403).json({ error: 'You do not have permission to re-run this investigation' });
-    }
-
-    const newRunId = await createTestRun(original.url, original.description, req.userId);
+    const newRunId = await createTestRun(original.url, original.description);
 
     await pipelineQueue.add(
       'run-pipeline',
@@ -120,7 +105,7 @@ router.post('/:id/rerun', requireAuth, async (req: AuthRequest, res: Response) =
       { attempts: 2, backoff: { type: 'exponential', delay: 5000 } }
     );
 
-    console.log(`🔁 Re-run queued: ${newRunId} (from ${req.params.id}) by user ${req.userId}`);
+    console.log(`🔁 Re-run queued: ${newRunId} (from ${req.params.id}) for ${original.url}`);
 
     return res.status(202).json({
       message: 'Re-run queued successfully',

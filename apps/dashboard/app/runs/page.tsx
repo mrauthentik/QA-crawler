@@ -28,11 +28,13 @@ const GRADE_COLOR: Record<string, string> = {
 
 function useToast() {
   const [toasts, setToasts] = useState<Toast[]>([]);
+
   const addToast = useCallback((message: string, type: Toast['type'] = 'success') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
   }, []);
+
   return { toasts, addToast };
 }
 
@@ -46,18 +48,18 @@ export default function RunsPage() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const { toasts, addToast } = useToast();
 
-  const getToken = useCallback(() => localStorage.getItem('qa_token') ?? '', []);
-
   // Auth guard
   useEffect(() => {
     const token = localStorage.getItem('qa_token');
     if (!token) router.push('/login');
   }, [router]);
 
+  const getToken = () => localStorage.getItem('qa_token') ?? '';
+
   const fetchRuns = useCallback(async () => {
     try {
       const res = await fetch(`${API_URL}/api/runs`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('qa_token') ?? ''}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();
       setRuns(Array.isArray(data) ? data : (data.runs ?? []));
@@ -74,7 +76,9 @@ export default function RunsPage() {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('[data-menu]')) setActiveMenu(null);
+      if (!target.closest('[data-menu]')) {
+        setActiveMenu(null);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -82,16 +86,20 @@ export default function RunsPage() {
 
   async function handleDelete(run: Run) {
     setDeletingId(run.id);
+    // Optimistic update — remove immediately
     setRuns(prev => prev.filter(r => r.id !== run.id));
     setActiveMenu(null);
+
     try {
       const res = await fetch(`${API_URL}/api/runs/${run.id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${getToken()}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
+
       if (!res.ok) throw new Error('Delete failed');
       addToast('Run deleted successfully');
     } catch {
+      // Restore on failure
       setRuns(prev => [run, ...prev].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ));
@@ -104,14 +112,18 @@ export default function RunsPage() {
   async function handleRerun(run: Run) {
     setRerunningId(run.id);
     setActiveMenu(null);
+
     try {
       const res = await fetch(`${API_URL}/api/runs/${run.id}/rerun`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${getToken()}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
+
       if (!res.ok) throw new Error('Re-run failed');
+
       const data = await res.json();
       addToast('Re-run queued — redirecting...');
+
       setTimeout(() => router.push(`/runs/${data.runId}`), 800);
     } catch {
       addToast('Failed to queue re-run', 'error');
@@ -136,7 +148,7 @@ export default function RunsPage() {
       {/* Toast notifications */}
       <div style={{
         position: 'fixed', bottom: '24px', right: '24px',
-        display: 'flex', flexDirection: 'column' as const, gap: '8px', zIndex: 1000,
+        display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 1000,
       }}>
         {toasts.map(toast => (
           <div key={toast.id} style={{
@@ -148,6 +160,7 @@ export default function RunsPage() {
             fontSize: '0.78rem',
             letterSpacing: '0.05em',
             boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            animation: 'slideIn 0.2s ease',
           }}>
             {toast.message}
           </div>
@@ -215,7 +228,10 @@ export default function RunsPage() {
               opacity: deletingId === run.id ? 0.5 : 1,
             }}>
 
-              <a href={`/runs/${run.id}`} style={{ textDecoration: 'none', minWidth: 0 }}>
+              {/* Run info — clickable */}
+              <a href={`/runs/${run.id}`} style={{
+                textDecoration: 'none', minWidth: 0,
+              }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                   <span className={`badge badge-${run.status ?? 'pending'}`}>
                     {(run.status ?? 'pending').toUpperCase()}
@@ -241,6 +257,7 @@ export default function RunsPage() {
                 </div>
               </a>
 
+              {/* Grade */}
               <div style={{
                 textAlign: 'right' as const,
                 display: 'flex', flexDirection: 'column' as const,
@@ -261,6 +278,7 @@ export default function RunsPage() {
                 )}
               </div>
 
+              {/* Action menu */}
               <div data-menu="true" style={{ position: 'relative' as const }}>
                 <button
                   onClick={e => {
@@ -278,8 +296,9 @@ export default function RunsPage() {
                     fontSize: '0.85rem',
                     lineHeight: 1,
                   }}
+                  title="Actions"
                 >
-                  {'···'}
+                  ···
                 </button>
 
                 {activeMenu === run.id && (
@@ -337,8 +356,9 @@ export default function RunsPage() {
                           cursor: action.disabled ? 'not-allowed' : 'pointer',
                         }}
                         onMouseEnter={e => {
-                          if (!action.disabled)
+                          if (!action.disabled) {
                             (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-card)';
+                          }
                         }}
                         onMouseLeave={e => {
                           (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
