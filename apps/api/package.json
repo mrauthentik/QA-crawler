@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
     "lint": "eslint src/",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "start": "tsx src/index.ts",
+    "start:worker": "tsx src/workers/pipeline.worker.ts",
+    "build": "npx playwright install chromium --with-deps || true"
   },
   "dependencies": {
     "@qa-detective/ai-engine": "workspace:*",

@@ -11,12 +11,12 @@ import { pipelineWorker } from './workers/pipeline.worker';
 
 const app = express();
 export { app };
-const PORT = process.env.API_PORT || 3001;
+const PORT = process.env.PORT || process.env.API_PORT || 3001;
 
 app.use(express.json());
 
 // Screenshots — create dir and serve as static files
-const SCREENSHOTS_DIR = path.join(__dirname, '../../screenshots');
+const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || path.join(__dirname, '../../screenshots');
 if (!fs.existsSync(SCREENSHOTS_DIR)) {
   fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
   console.log('📸 Screenshots directory created:', SCREENSHOTS_DIR);
