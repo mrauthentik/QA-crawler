@@ -2,17 +2,19 @@
   "name": "qa-detective",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.31.0",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "test": "turbo run test",
+    "type-check": "turbo run type-check",
     "lint": "turbo run lint",
-    "type-check": "turbo run type-check"
+    "check": "pnpm run type-check",
+    "check:all": "turbo run type-check && turbo run build"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
     "typescript": "^5.4.0",
-    "prettier": "^3.2.0",
-    "eslint": "^8.57.0"
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.0"
   }
 }

@@ -35,3 +35,15 @@ Thumbs.db
 
 # Docker
 postgres_data/
+
+# Turborepo cache
+.turbo/
+**/.turbo/
+
+# Turbo build cache
+*.tar.zst
+*.log
+
+# Build outputs
+**/dist/
+**/*.tsbuildinfo

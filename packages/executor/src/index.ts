@@ -4,11 +4,13 @@ import { runNavigationTest } from './runners/navigation';
 import { runPerformanceTest } from './runners/performance';
 import { runSecurityTest } from './runners/security';
 import { runFunctionalTest } from './runners/functional';
+import { runFormTest } from './runners/form';
+import { runAccessibilityTest } from './runners/accessibility';
 
 export interface TestCase {
   id: string;
   name: string;
-  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance';
+  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance' | 'accessibility';
   priority: 'critical' | 'high' | 'medium' | 'low';
   steps: string[];
   expectedOutcome: string;
@@ -56,13 +58,19 @@ export async function executeTestPlan(
         case 'security':
           result = await runSecurityTest(page, testCase, url);
           break;
+        case 'form':
+          result = await runFormTest(page, testCase, url);
+          break;
+        case 'accessibility':
+          result = await runAccessibilityTest(page, testCase, url);
+          break;
         case 'functional':
         default:
           result = await runFunctionalTest(page, testCase, url);
           break;
       }
 
-      // Take screenshot on failure
+      // Screenshot on failure
       if (result.status === 'failed' || result.status === 'error') {
         try {
           const screenshotPath = screenshotsDir
@@ -88,7 +96,6 @@ export async function executeTestPlan(
 
     const icon = result.status === 'passed' ? '✅' : result.status === 'failed' ? '❌' : '⚠️';
     console.log(`  ${icon} ${result.status.toUpperCase()} — ${result.message.slice(0, 80)}`);
-
     results.push(result);
     await page.close();
   }
@@ -110,4 +117,3 @@ export async function executeTestPlan(
     results,
   };
 }
-

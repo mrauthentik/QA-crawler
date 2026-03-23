@@ -6,16 +6,14 @@ import fs from 'fs/promises';
 
 dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
-// Debug — confirm env is loaded
-console.log('🔍 DATABASE_URL:', process.env.DATABASE_URL?.replace(/:[^:@]+@/, ':***@') ?? 'NOT FOUND');
+console.log('🔍 DATABASE_URL:', process.env.DATABASE_URL?.replace(/:\/\/[^:]+:[^@]+@/, '://***:***@'));
 
-// Build connection config explicitly — don't rely on connectionString parsing
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
+
 export const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'qa_detective',
-  user: 'admin',
-  password: process.env.DB_PASSWORD,
+  connectionString: process.env.DATABASE_URL,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
@@ -45,12 +43,13 @@ export async function initDb(): Promise<void> {
 
 export async function createTestRun(
   url: string,
-  description: string
+  description: string,
+  userId?: string
 ): Promise<string> {
   const { rows } = await pool.query(
-    `INSERT INTO test_runs (url, description, status)
-     VALUES ($1, $2, 'pending') RETURNING id`,
-    [url, description]
+    `INSERT INTO test_runs (url, description, status, user_id)
+     VALUES ($1, $2, 'pending', $3) RETURNING id`,
+    [url, description, userId ?? null]
   );
   return rows[0].id;
 }
@@ -140,9 +139,64 @@ export async function getTestRun(id: string) {
   };
 }
 
-export async function getAllTestRuns() {
+export async function getAllTestRuns(userId?: string) {
+  if (userId) {
+    const { rows } = await pool.query(
+      'SELECT * FROM test_runs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
+      [userId]
+    );
+    return rows;
+  }
   const { rows } = await pool.query(
     'SELECT * FROM test_runs ORDER BY created_at DESC LIMIT 50'
   );
   return rows;
+}
+
+export async function saveFindings(
+  runId: string,
+  findings: Array<{
+    testId: string;
+    testName: string;
+    status: string;
+    severity: string;
+    what: string;
+    why: string;
+    how: string;
+    screenshot?: string;
+  }>
+): Promise<void> {
+  await pool.query(
+    `UPDATE test_runs SET findings = $1 WHERE id = $2`,
+    [JSON.stringify(findings), runId]
+  );
+}
+
+export async function deleteTestRun(id: string): Promise<boolean> {
+  const result = await pool.query(
+    'DELETE FROM test_runs WHERE id = $1 RETURNING id',
+    [id]
+  );
+  return result.rowCount !== null && result.rowCount > 0;
+}
+
+export async function toggleRunVisibility(
+  id: string,
+  isPublic: boolean
+): Promise<boolean> {
+  const result = await pool.query(
+    'UPDATE test_runs SET is_public = $1 WHERE id = $2 RETURNING id',
+    [isPublic, id]
+  );
+  return result.rowCount !== null && result.rowCount > 0;
+}
+
+export async function saveCrawledPages(
+  runId: string,
+  pages: Array<{ url: string; title: string; formsCount: number; linksCount: number }>
+): Promise<void> {
+  await pool.query(
+    'UPDATE test_runs SET crawled_pages = $1 WHERE id = $2',
+    [JSON.stringify(pages), runId]
+  );
 }

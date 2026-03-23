@@ -3,20 +3,31 @@ import { resolve } from 'path';
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
 import { initDb } from './db/index';
 import runsRouter from './routes/runs';
 import { pipelineWorker } from './workers/pipeline.worker';
 
 const app = express();
-const PORT = process.env.API_PORT || 3001;
+export { app };
+const PORT = process.env.PORT || process.env.API_PORT || 3001;
 
 app.use(express.json());
+
+// Screenshots — create dir and serve as static files
+const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || path.join(__dirname, '../../screenshots');
+if (!fs.existsSync(SCREENSHOTS_DIR)) {
+  fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+  console.log('📸 Screenshots directory created:', SCREENSHOTS_DIR);
+}
+app.use('/screenshots', express.static(SCREENSHOTS_DIR));
 
 // CORS for dashboard
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, PATCH, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
@@ -40,7 +51,12 @@ async function start() {
     console.log('🔌 Connecting to database...');
     await initDb();
 
-    app.listen(PORT, () => {
+    // Start pipeline worker in-process
+import('./workers/pipeline.worker').then(() => {
+  console.log('👷 Pipeline worker started in-process');
+}).catch(err => console.error('Worker failed to start:', err));
+
+app.listen(PORT, () => {
       console.log('\n╔══════════════════════════════════════════════╗');
       console.log('║      🕵️  QA Detective API — Started            ║');
       console.log('╚══════════════════════════════════════════════╝');

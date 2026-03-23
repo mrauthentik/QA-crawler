@@ -1,0 +1,73 @@
+services:
+  # ─── Dashboard (Next.js) ────────────────────────────────────────────────────
+  - type: web
+    name: qa-detective-dashboard
+    runtime: node
+    rootDir: apps/dashboard
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    startCommand: pnpm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_AUTH_URL
+        sync: false
+
+  # ─── API + Worker (combined) ─────────────────────────────────────────────────
+  - type: web
+    name: qa-detective-api
+    runtime: node
+    rootDir: apps/api
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    startCommand: pnpm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: qa-detective-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PORT
+        value: 10000
+      - key: SCREENSHOTS_DIR
+        value: /tmp/screenshots
+
+  # ─── Auth Service ────────────────────────────────────────────────────────────
+  - type: web
+    name: qa-detective-auth
+    runtime: node
+    rootDir: apps/auth
+    buildCommand: pnpm install --frozen-lockfile
+    startCommand: pnpm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: qa-detective-db
+          property: connectionString
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: PORT
+        value: 10000
+      - key: DASHBOARD_URL
+        sync: false
+      - key: AUTH_URL
+        sync: false
+
+databases:
+  - name: qa-detective-db
+    databaseName: qa_detective
+    user: admin
+    plan: free

@@ -2,12 +2,16 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
+    "lib": ["ES2022", "DOM"],
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@qa-detective/shared": ["../shared/src/index.ts"]
+    }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*", "../shared/src/**/*"],
+  "exclude": ["node_modules", "dist", "src/test-pipeline.ts"]
 }
