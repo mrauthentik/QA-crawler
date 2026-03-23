@@ -11,7 +11,7 @@ import authRouter from './routes/auth';
 import oauthRouter from './routes/oauth';
 
 const app = express();
-const PORT = process.env.AUTH_PORT || 3002;
+const PORT = process.env.PORT || process.env.AUTH_PORT || 3002;
 const DASHBOARD_URL = process.env.DASHBOARD_URL || 'http://localhost:3000';
 
 app.use(cors({

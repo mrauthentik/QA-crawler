@@ -29,7 +29,7 @@ export const pipelineWorker = new Worker(
         console.log(`\n🔄 Processing job ${job.id} for run ${runId}`);
 
         // Ensure screenshots dir exists
-        const SCREENSHOTS_DIR = path.join(__dirname, '../../../screenshots');
+        const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || path.join(__dirname, '../../../screenshots');
         if (!fs.existsSync(SCREENSHOTS_DIR)) {
           fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
         }
@@ -130,4 +130,5 @@ pipelineWorker.on('failed', (job, err) => {
     console.error(`❌ Job ${job?.id} failed:`, err);
 })
 
-console.log('👷 Pipeline worker started — waiting for jobs...');
+console.log('👷 Pipeline worker started — waiting for jobs...');// Note: In production, SCREENSHOTS_DIR points to /tmp which is ephemeral
+// Screenshots will not persist across deploys — add S3/Cloudinary for persistence
