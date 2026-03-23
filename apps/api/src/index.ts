@@ -51,7 +51,12 @@ async function start() {
     console.log('🔌 Connecting to database...');
     await initDb();
 
-    app.listen(PORT, () => {
+    // Start pipeline worker in-process
+import('./workers/pipeline.worker').then(() => {
+  console.log('👷 Pipeline worker started in-process');
+}).catch(err => console.error('Worker failed to start:', err));
+
+app.listen(PORT, () => {
       console.log('\n╔══════════════════════════════════════════════╗');
       console.log('║      🕵️  QA Detective API — Started            ║');
       console.log('╚══════════════════════════════════════════════╝');
