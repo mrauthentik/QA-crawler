@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { ReactElement } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
+import { Lock, Unlock, ArrowLeft, ArrowRight, AlertCircle, AlertTriangle, AlertOctagon, XCircle, CheckCircle, Info, Globe, FileSearch, Camera, Check, Copy } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -28,6 +30,7 @@ interface Run {
   completed_at?: string;
   is_public: boolean;
   user_id?: string;
+  crawled_pages?: Array<{ url: string; title: string; formsCount: number; linksCount: number }>;
   results: TestResult[];
   recommendations: string[];
   findings?: Array<{
@@ -44,12 +47,12 @@ interface Run {
 
 const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info'];
 
-const SEVERITY_STYLES: Record<string, { color: string; bg: string; border: string; icon: string }> = {
-  critical: { color: 'var(--accent-red)',     bg: 'var(--accent-red-dim)',       border: 'rgba(232,64,64,0.3)',   icon: '🔴' },
-  high:     { color: '#e8944a',                bg: 'rgba(232,148,74,0.1)',        border: 'rgba(232,148,74,0.3)', icon: '🟠' },
-  medium:   { color: 'var(--accent-amber)',    bg: 'var(--accent-amber-dim)',     border: 'rgba(245,166,35,0.3)', icon: '🟡' },
-  low:      { color: 'var(--accent-green)',    bg: 'var(--accent-green-dim)',     border: 'rgba(61,214,140,0.3)', icon: '🟢' },
-  info:     { color: 'var(--text-secondary)',  bg: 'rgba(85,85,80,0.1)',          border: 'var(--border)',        icon: '⚪' },
+const SEVERITY_STYLES: Record<string, { color: string; bg: string; border: string; icon: ReactElement }> = {
+  critical: { color: 'var(--accent-red)',     bg: 'var(--accent-red-dim)',       border: 'rgba(232,64,64,0.3)', icon: <XCircle size={14} color='var(--accent-red)' /> },
+  high:     { color: '#e8944a',                bg: 'rgba(232,148,74,0.1)',        border: 'rgba(232,148,74,0.3)', icon: <AlertOctagon size={14} color='#e8944a' /> },
+  medium:   { color: 'var(--accent-amber)',    bg: 'var(--accent-amber-dim)',     border: 'rgba(245,166,35,0.3)', icon: <AlertTriangle size={14} color='var(--accent-amber)' /> },
+  low:      { color: 'var(--accent-green)',    bg: 'var(--accent-green-dim)',     border: 'rgba(61,214,140,0.3)', icon: <CheckCircle size={14} color='var(--accent-green)' /> },
+  info:     { color: 'var(--text-secondary)',  bg: 'rgba(85,85,80,0.1)',          border: 'var(--border)', icon: <Info size={14} color='var(--text-secondary)' /> },
 };
 
 function GradeDisplay({ grade, score }: { grade: string; score: number }) {
@@ -194,7 +197,7 @@ export default function RunPage() {
   // Private run — not owner
   if (errorCode === 'PRIVATE_RUN') return (
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '80px 32px', textAlign: 'center' as const }}>
-      <div style={{ fontSize: '3rem', marginBottom: '16px' }}>{'🔒'}</div>
+      <div style={{ fontSize: '3rem', marginBottom: '16px' }}><Lock size={48} /></div>
       <div className="font-display" style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '12px', letterSpacing: '0.05em' }}>
         PRIVATE INVESTIGATION
       </div>
@@ -213,7 +216,10 @@ export default function RunPage() {
 
   if (error || !run) return (
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '80px 32px', textAlign: 'center' as const }}>
-      <div className="font-mono" style={{ color: 'var(--accent-red)', fontSize: '0.85rem' }}>{'⚠ '}{error || 'Run not found'}</div>
+      <div className="font-mono" style={{ color: 'var(--accent-red)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <AlertCircle size={16} />
+        <span>{error || 'Run not found'}</span>
+      </div>
       <button onClick={() => router.push('/')} style={{
         marginTop: '24px', background: 'transparent', border: '1px solid var(--border)',
         color: 'var(--text-secondary)', fontFamily: 'IBM Plex Mono, monospace',
@@ -253,7 +259,7 @@ export default function RunPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Visibility toggle — owners only */}
-          {isOwner && (
+              {isOwner && (
             <button
               onClick={handleToggleVisibility}
               disabled={visibilityLoading}
@@ -267,7 +273,12 @@ export default function RunPage() {
                 letterSpacing: '0.1em', padding: '6px 14px', cursor: 'pointer',
               }}
             >
-              {visibilityLoading ? '...' : run.is_public ? '🔓 PUBLIC' : '🔒 PRIVATE'}
+              {visibilityLoading ? '...' : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  {run.is_public ? <Unlock size={14} /> : <Lock size={14} />}
+                  {run.is_public ? 'PUBLIC' : 'PRIVATE'}
+                </span>
+              )}
             </button>
           )}
 
@@ -332,6 +343,56 @@ export default function RunPage() {
               <div className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginTop: '6px' }}>{stat.label}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Crawled pages */}
+      {run.crawled_pages && run.crawled_pages.length > 0 && (
+        <div style={{ marginBottom: '32px' }}>
+          <div className="font-mono" style={{
+            fontSize: '0.65rem', letterSpacing: '0.2em',
+            color: 'var(--text-muted)', textTransform: 'uppercase' as const, marginBottom: '12px',
+            display: 'flex', alignItems: 'center', gap: '8px',
+          }}>
+            <Globe size={12} />
+            {run.crawled_pages.length} page{run.crawled_pages.length !== 1 ? 's' : ''} crawled
+          </div>
+          <div style={{
+            display: 'flex', flexDirection: 'column' as const, gap: '1px',
+            background: 'var(--border)', border: '1px solid var(--border)',
+            borderRadius: '2px', overflow: 'hidden',
+          }}>
+            {run.crawled_pages.map((page, i) => (
+              <div key={i} style={{
+                background: 'var(--bg-card)', padding: '10px 16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                  <FileSearch size={12} color='var(--text-muted)' />
+                  <a href={page.url} target="_blank" rel="noopener noreferrer" style={{
+                    fontFamily: 'IBM Plex Mono, monospace', fontSize: '0.75rem',
+                    color: 'var(--accent-amber)', textDecoration: 'none',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+                  }}>
+                    {page.url.replace(/^https?:\/\//, '')}
+                  </a>
+                  {page.title && (
+                    <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      — {page.title}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '12px', flexShrink: 0 }}>
+                  <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                    {page.linksCount} links
+                  </span>
+                  <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                    {page.formsCount} forms
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -402,9 +463,10 @@ export default function RunPage() {
                       <div style={{ marginTop: '12px' }}>
                         <div className="font-mono" style={{
                           fontSize: '0.65rem', color: 'var(--text-muted)',
-                          letterSpacing: '0.08em', marginBottom: '8px',
+                          letterSpacing: '0.08em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: 8,
                         }}>
-                          {'📸 SCREENSHOT'}
+                          <Camera size={14} />
+                          <span>SCREENSHOT</span>
                         </div>
                         <img
                           src={`${API_URL}${finding.screenshot}`}
@@ -458,8 +520,8 @@ export default function RunPage() {
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
             {passed.map((result, i) => (
               <div key={result.test_id ?? i} style={{ background: 'var(--bg-card)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ color: 'var(--accent-green)', fontSize: '0.8rem' }}>✓</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Check size={14} style={{ color: 'var(--accent-green)', marginRight: 6 }} />
                   <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{result.name}</span>
                 </div>
                 <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' as const }}>{result.duration}ms</span>

@@ -190,3 +190,13 @@ export async function toggleRunVisibility(
   );
   return result.rowCount !== null && result.rowCount > 0;
 }
+
+export async function saveCrawledPages(
+  runId: string,
+  pages: Array<{ url: string; title: string; formsCount: number; linksCount: number }>
+): Promise<void> {
+  await pool.query(
+    'UPDATE test_runs SET crawled_pages = $1 WHERE id = $2',
+    [JSON.stringify(pages), runId]
+  );
+}

@@ -5,8 +5,8 @@ dotenv.config({path: resolve(__dirname, '../../../.env')})
 import { Worker } from 'bullmq'
 import fs from 'fs'
 import path from 'path'
-import { crawlPage } from '@qa-detective/crawler';
-import { generateTestPlan } from '@qa-detective/ai-engine';
+import { crawlSite } from '@qa-detective/crawler';
+import { generateTestPlan, flattenSiteCrawl } from '@qa-detective/ai-engine';
 import { executeTestPlan } from '@qa-detective/executor';
 import { generateReport } from '@qa-detective/reporter';
 import {
@@ -14,6 +14,7 @@ import {
     saveTestResults,
     saveRecommendations,
     saveFindings,
+    saveCrawledPages,
 } from '../db/index'
 
 const connection = {
@@ -38,13 +39,27 @@ export const pipelineWorker = new Worker(
             await updateTestRun(runId, {status: 'running'})
             await job.updateProgress(10)
 
-            // Phase 1: Crawl
-      console.log(`📡 Crawling ${url}...`);
-      const crawlResult = await crawlPage(url);
+            // Phase 1: Multi-page crawl
+      console.log(`📡 Crawling site: ${url}...`);
+      const siteCrawl = await crawlSite(url, 10);
+      console.log(`📄 Crawled ${siteCrawl.totalPages} page(s): ${siteCrawl.pages.map(p => p.url).join(', ')}`);
       await job.updateProgress(30);
 
-      // Phase 2: Generate test plan
+      // Phase 2: Generate test plan from flattened multi-page data
       console.log('🤖 Generating test plan...');
+      const crawlResult = flattenSiteCrawl({
+        baseUrl: siteCrawl.baseUrl,
+        pages: siteCrawl.pages,
+        totalPages: siteCrawl.totalPages,
+      });
+      // Save crawled pages metadata
+      await saveCrawledPages(runId, siteCrawl.pages.map(p => ({
+        url: p.url,
+        title: p.title,
+        formsCount: p.forms.length,
+        linksCount: p.links.length,
+      })));
+
       const testPlan = await generateTestPlan(description, crawlResult);
       await job.updateProgress(50);
 

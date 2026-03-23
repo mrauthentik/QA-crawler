@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Fingerprint } from 'lucide-react';
 
 const AUTH_URL = process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:3002';
 
@@ -77,7 +78,7 @@ export default function RegisterPage() {
         borderRadius: '4px',
       }}>
         <div style={{ marginBottom: '32px', textAlign: 'center' as const }}>
-          <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{'🕵️'}</div>
+          <div style={{ fontSize: '2rem', marginBottom: '8px', marginLeft: '10rem' }}><Fingerprint size={36} /></div>
           <h1 style={{
             fontSize: '1.4rem',
             letterSpacing: '0.15em',

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
+import { AlertCircle, ArrowRight, RefreshCw, Copy, Trash2 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -193,8 +194,9 @@ export default function RunsPage() {
       )}
 
       {error && (
-        <div className="font-mono" style={{ color: 'var(--accent-red)', fontSize: '0.8rem' }}>
-          {'⚠ '}{error}
+        <div className="font-mono" style={{ color: 'var(--accent-red)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <AlertCircle size={16} />
+          <span>{error}</span>
         </div>
       )}
 
@@ -320,19 +322,23 @@ export default function RunsPage() {
                   >
                     {[
                       {
-                        label: rerunningId === run.id ? 'QUEUING...' : '↺  RE-RUN',
+                        label: rerunningId === run.id ? 'QUEUING...' : null,
+                        icon: <RefreshCw size={14} style={{ marginRight: 8 }} />,
+                        text: 'RE-RUN',
                         onClick: () => handleRerun(run),
                         disabled: rerunningId === run.id,
                         color: 'var(--text-primary)',
                       },
                       {
-                        label: '⎘  SHARE LINK',
+                        icon: <Copy size={14} style={{ marginRight: 8 }} />,
+                        text: 'SHARE LINK',
                         onClick: () => handleShare(run),
                         disabled: false,
                         color: 'var(--text-primary)',
                       },
                       {
-                        label: '✕  DELETE',
+                        icon: <Trash2 size={14} style={{ marginRight: 8 }} />,
+                        text: 'DELETE',
                         onClick: () => handleDelete(run),
                         disabled: deletingId === run.id,
                         color: 'var(--accent-red)',
@@ -365,7 +371,10 @@ export default function RunsPage() {
                           (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
                         }}
                       >
-                        {action.label}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                          {action.icon ?? null}
+                          {action.label ?? action.text}
+                        </span>
                       </button>
                     ))}
                   </div>

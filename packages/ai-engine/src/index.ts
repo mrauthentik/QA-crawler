@@ -1,2 +1,2 @@
-export { generateTestPlan } from './planner';
-export type { TestCase, TestPlan, CrawlSummary } from './planner';
+export { generateTestPlan, flattenSiteCrawl } from './planner';
+export type { TestCase, TestPlan, CrawlSummary, SiteCrawlSummary } from './planner';
