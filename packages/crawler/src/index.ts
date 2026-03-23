@@ -37,9 +37,23 @@ function normaliseUrl(raw: string, base: string): string | null {
   }
 }
 
+function getRootDomain(url: string): string {
+  try {
+    const hostname = new URL(url).hostname;
+    // Strip www. prefix for comparison
+    return hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
 function isSameOrigin(url: string, base: string): boolean {
   try {
-    return new URL(url).origin === new URL(base).origin;
+    const urlDomain = getRootDomain(url);
+    const baseDomain = getRootDomain(base);
+    if (!urlDomain || !baseDomain) return false;
+    // Same root domain — treat www.example.com and example.com as same origin
+    return urlDomain === baseDomain;
   } catch {
     return false;
   }
