@@ -108,7 +108,11 @@ async function crawlSinglePage(
 
 // ─── Single page crawl (backwards compatible) ─────────────────────────────────
 export async function crawlPage(url: string): Promise<CrawlResult> {
-  const browser = await chromium.launch({ headless: true });
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  const browser = await chromium.launch({
+    headless: true,
+    ...(executablePath ? { executablePath } : {}),
+  });
   const page = await browser.newPage();
   try {
     return await crawlSinglePage(page, url, url);
@@ -122,7 +126,11 @@ export async function crawlSite(
   startUrl: string,
   maxPages = MAX_PAGES_DEFAULT
 ): Promise<SiteCrawlResult> {
-  const browser: Browser = await chromium.launch({ headless: true });
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  const browser: Browser = await chromium.launch({
+    headless: true,
+    ...(executablePath ? { executablePath } : {}),
+  });
 
   const visited = new Set<string>();
   const queue: string[] = [];
