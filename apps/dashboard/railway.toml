@@ -1,6 +1,7 @@
 [build]
-builder = "nixpacks"
-buildCommand = "npm install -g pnpm && pnpm install && pnpm run build"
+builder = "dockerfile"
+dockerfilePath = "apps/dashboard/Dockerfile"
+dockerContext = "."
 
 [deploy]
 startCommand = "pnpm run start"
