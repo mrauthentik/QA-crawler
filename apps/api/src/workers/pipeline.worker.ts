@@ -17,10 +17,17 @@ import {
     saveCrawledPages,
 } from '../db/index'
 
-const connection = {
+function getRedisConnection() {
+  if (process.env.REDIS_URL) {
+    return { url: process.env.REDIS_URL };
+  }
+  return {
     host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379')
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+  };
 }
+
+const connection = getRedisConnection();
 
 export const pipelineWorker = new Worker(
     'pipeline',
