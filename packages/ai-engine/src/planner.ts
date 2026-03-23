@@ -37,6 +37,26 @@ export interface CrawlSummary {
   errors: string[];
 }
 
+export interface SiteCrawlSummary {
+  baseUrl: string;
+  pages: CrawlSummary[];
+  totalPages: number;
+}
+
+// Flatten a multi-page crawl into a single CrawlSummary for the AI
+export function flattenSiteCrawl(site: SiteCrawlSummary): CrawlSummary {
+  const allLinks = [...new Set(site.pages.flatMap(p => p.links))];
+  const allForms = site.pages.flatMap(p => p.forms);
+  const allErrors = site.pages.flatMap(p => p.errors);
+  return {
+    url: site.baseUrl,
+    title: site.pages[0]?.title ?? site.baseUrl,
+    links: allLinks,
+    forms: allForms,
+    errors: allErrors,
+  };
+}
+
 function extractJSON(raw: string): string {
   // Remove markdown code fences
   const cleaned = raw.replace(/```json|```/g, '').trim();

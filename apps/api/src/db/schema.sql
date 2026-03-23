@@ -42,3 +42,6 @@ CREATE INDEX IF NOT EXISTS idx_test_runs_user_id ON test_runs(user_id);
 
 -- Run visibility
 ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
+
+-- Store multi-page crawl metadata
+ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS crawled_pages JSONB DEFAULT '[]';

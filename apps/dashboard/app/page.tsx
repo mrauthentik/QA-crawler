@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
+import { Search, Bot, Play, FileText, AlertCircle, ArrowRight } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -255,11 +256,11 @@ export default function HomePage() {
             alignItems: 'center',
             gap: '10px',
           }}>
-            <span>⚠</span>
-            <span className="font-mono" style={{ fontSize: '0.8rem', color: 'var(--accent-red)' }}>
-              {error}
-            </span>
-          </div>
+              <AlertCircle size={18} />
+              <span className="font-mono" style={{ fontSize: '0.8rem', color: 'var(--accent-red)' }}>
+                {error}
+              </span>
+            </div>
         )}
 
         {/* Submit */}
@@ -282,7 +283,12 @@ export default function HomePage() {
                 }} />
                 QUEUING...
               </span>
-            ) : '→ OPEN CASE'}
+            ) : (
+              <>
+                <ArrowRight size={14} />
+                <span style={{ marginLeft: 8 }}>OPEN CASE</span>
+              </>
+            )}
           </button>
 
           <span className="font-mono" style={{
@@ -317,10 +323,10 @@ export default function HomePage() {
           overflow: 'hidden',
         }}>
           {[
-            { step: '01', icon: '🔍', label: 'Crawl', desc: 'Maps every page, link, and form' },
-            { step: '02', icon: '🤖', label: 'Generate', desc: 'AI writes targeted test cases' },
-            { step: '03', icon: '▶', label: 'Execute', desc: 'Real browser runs every test' },
-            { step: '04', icon: '📋', label: 'Report', desc: 'Detective report with fixes' },
+            { step: '01', icon: <Search size={28} />, label: 'Crawl', desc: 'Maps every page, link, and form' },
+            { step: '02', icon: <Bot size={28} />, label: 'Generate', desc: 'AI writes targeted test cases' },
+            { step: '03', icon: <Play size={28} />, label: 'Execute', desc: 'Real browser runs every test' },
+            { step: '04', icon: <FileText size={28} />, label: 'Report', desc: 'Detective report with fixes' },
           ].map(item => (
             <div key={item.step} style={{
               background: 'var(--bg-card)',
