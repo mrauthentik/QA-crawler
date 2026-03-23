@@ -31,7 +31,11 @@ export async function executeTestPlan(
   testCases: TestCase[],
   screenshotsDir?: string
 ): Promise<ExecutionResult> {
-  const browser = await chromium.launch({ headless: true });
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  const browser = await chromium.launch({
+    headless: true,
+    ...(executablePath ? { executablePath } : {}),
+  });
   const context = await browser.newContext({
     userAgent: 'QA-Detective/1.0 (Automated Testing)',
   });
