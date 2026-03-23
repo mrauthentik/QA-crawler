@@ -13,9 +13,19 @@ import oauthRouter from './routes/oauth';
 const app = express();
 const PORT = process.env.PORT || process.env.AUTH_PORT || 3002;
 const DASHBOARD_URL = process.env.DASHBOARD_URL || 'http://localhost:3000';
+const ALLOWED_ORIGINS = [
+  DASHBOARD_URL,
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter(Boolean);
 
 app.use(cors({
-  origin: DASHBOARD_URL,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 app.use(express.json());
