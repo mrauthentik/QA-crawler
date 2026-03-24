@@ -62,7 +62,7 @@ export default function HomePage() {
   };
 
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '64px 32px' }}>
+    <div className="page-container page-container--hero">
 
       {/* Hero */}
       <div style={{ marginBottom: '64px', animation: 'fadeUp 0.5s ease forwards' }}>
@@ -86,7 +86,7 @@ export default function HomePage() {
         </div>
 
         <h1 className="font-display" style={{
-          fontSize: 'clamp(3rem, 8vw, 5.5rem)',
+          fontSize: 'clamp(2.5rem, 8vw, 5.5rem)',
           lineHeight: 0.95,
           letterSpacing: '0.02em',
           color: 'var(--text-primary)',
@@ -110,8 +110,7 @@ export default function HomePage() {
       </div>
 
       {/* Main form card */}
-      <div className="card scanlines" style={{
-        padding: '40px',
+      <div className="card scanlines form-card" style={{
         animation: 'fadeUp 0.6s ease 0.1s both',
         borderColor: 'var(--border-bright)',
       }}>
@@ -124,6 +123,8 @@ export default function HomePage() {
           marginBottom: '32px',
           paddingBottom: '20px',
           borderBottom: '1px solid var(--border)',
+          flexWrap: 'wrap',
+          gap: '8px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span className="font-mono" style={{
@@ -264,7 +265,7 @@ export default function HomePage() {
         )}
 
         {/* Submit */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="submit-row">
           <button
             className="btn-primary"
             onClick={handleSubmit}
@@ -313,15 +314,7 @@ export default function HomePage() {
           How the investigation works
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '1px',
-          background: 'var(--border)',
-          border: '1px solid var(--border)',
-          borderRadius: '2px',
-          overflow: 'hidden',
-        }}>
+        <div className="steps-grid">
           {[
             { step: '01', icon: <Search size={28} />, label: 'Crawl', desc: 'Maps every page, link, and form' },
             { step: '02', icon: <Bot size={28} />, label: 'Generate', desc: 'AI writes targeted test cases' },

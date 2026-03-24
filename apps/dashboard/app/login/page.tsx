@@ -70,14 +70,7 @@ function LoginForm() {
   };
 
   return (
-    <div style={{
-      width: '100%',
-      maxWidth: '420px',
-      padding: '48px 40px',
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: '4px',
-    }}>
+    <div className="auth-card">
       <div style={{ marginBottom: '32px', textAlign: 'center' as const }}>
         <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
           <Fingerprint size={32} color='var(--accent-amber)' strokeWidth={1.5} />
@@ -164,7 +157,7 @@ function LoginForm() {
           border: '1px solid var(--border)', borderRadius: '2px',
           textDecoration: 'none', fontFamily: 'IBM Plex Mono, monospace',
           fontSize: '0.85rem', letterSpacing: '0.1em',
-          color: 'var(--text-secondary)',
+          color: 'var(--text-secondary)', boxSizing: 'border-box',
         }}>
           CONTINUE WITH GOOGLE
         </a>
@@ -185,10 +178,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', background: 'var(--bg-primary)',
-    }}>
+    <div className="auth-page">
       <Suspense fallback={
         <div style={{ textAlign: 'center' as const }}>
           <Fingerprint size={32} color='var(--accent-amber)' strokeWidth={1.5} />

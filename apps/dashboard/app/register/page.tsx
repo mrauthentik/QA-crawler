@@ -62,23 +62,12 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--bg-primary)',
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '420px',
-        padding: '48px 40px',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderRadius: '4px',
-      }}>
+    <div className="auth-page">
+      <div className="auth-card">
         <div style={{ marginBottom: '32px', textAlign: 'center' as const }}>
-          <div style={{ fontSize: '2rem', marginBottom: '8px', marginLeft: '10rem' }}><Fingerprint size={36} /></div>
+          <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
+            <Fingerprint size={36} color='var(--accent-amber)' strokeWidth={1.5} />
+          </div>
           <h1 style={{
             fontSize: '1.4rem',
             letterSpacing: '0.15em',
@@ -182,6 +171,7 @@ export default function RegisterPage() {
             fontSize: '0.85rem',
             letterSpacing: '0.1em',
             color: 'var(--text-secondary)',
+            boxSizing: 'border-box',
           }}>
             CONTINUE WITH GOOGLE
           </a>

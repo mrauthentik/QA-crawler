@@ -1,8 +1,13 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import NavClient from './NavClient';
 import AuthNav from './AuthNav';
 import { Fingerprint } from 'lucide-react';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: 'QA Detective — Autonomous Testing Intelligence',
@@ -19,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <span><Fingerprint size={28} /></span>
               <span className="font-display logo-text">QA DETECTIVE</span>
             </a>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <div className="header-right">
               <NavClient />
               <AuthNav />
             </div>
