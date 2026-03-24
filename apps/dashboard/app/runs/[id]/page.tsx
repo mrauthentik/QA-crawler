@@ -64,7 +64,7 @@ function GradeDisplay({ grade, score }: { grade: string; score: number }) {
   const color = colorMap[letter] || 'var(--text-secondary)';
   return (
     <div style={{ textAlign: 'center' as const }}>
-      <div className="font-display" style={{ fontSize: '6rem', lineHeight: 1, color, textShadow: `0 0 40px ${color}44` }}>
+      <div className="font-display" style={{ fontSize: 'clamp(4rem, 10vw, 6rem)', lineHeight: 1, color, textShadow: `0 0 40px ${color}44` }}>
         {letter}
       </div>
       <div className="font-mono" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', letterSpacing: '0.1em', marginTop: '8px' }}>
@@ -187,7 +187,7 @@ export default function RunPage() {
   }
 
   if (loading) return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '80px 32px', textAlign: 'center' as const }}>
+    <div className="page-container" style={{ paddingTop: '80px', textAlign: 'center' as const }}>
       <div className="font-mono" style={{ color: 'var(--text-muted)', letterSpacing: '0.1em', fontSize: '0.8rem' }}>
         LOADING CASE FILE<span className="animate-blink">_</span>
       </div>
@@ -196,7 +196,7 @@ export default function RunPage() {
 
   // Private run — not owner
   if (errorCode === 'PRIVATE_RUN') return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '80px 32px', textAlign: 'center' as const }}>
+    <div className="page-container" style={{ paddingTop: '80px', textAlign: 'center' as const }}>
       <div style={{ fontSize: '3rem', marginBottom: '16px' }}><Lock size={48} /></div>
       <div className="font-display" style={{ fontSize: '1.8rem', color: 'var(--text-primary)', marginBottom: '12px', letterSpacing: '0.05em' }}>
         PRIVATE INVESTIGATION
@@ -215,8 +215,8 @@ export default function RunPage() {
   );
 
   if (error || !run) return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '80px 32px', textAlign: 'center' as const }}>
-      <div className="font-mono" style={{ color: 'var(--accent-red)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="page-container" style={{ paddingTop: '80px', textAlign: 'center' as const }}>
+      <div className="font-mono" style={{ color: 'var(--accent-red)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
         <AlertCircle size={16} />
         <span>{error || 'Run not found'}</span>
       </div>
@@ -235,7 +235,7 @@ export default function RunPage() {
   );
 
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '48px 32px' }}>
+    <div className="page-container">
 
       {/* Toast */}
       {toastMsg && (
@@ -245,19 +245,20 @@ export default function RunPage() {
           borderRadius: '2px', fontFamily: 'IBM Plex Mono, monospace',
           fontSize: '0.78rem', letterSpacing: '0.05em',
           boxShadow: '0 4px 12px rgba(0,0,0,0.4)', zIndex: 1000,
+          animation: 'slideIn 0.2s ease',
         }}>
           {toastMsg}
         </div>
       )}
 
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+      <div className="run-detail-topbar" style={{ marginBottom: '32px' }}>
         <a href="/runs" style={{
           fontFamily: 'IBM Plex Mono, monospace', fontSize: '0.7rem', color: 'var(--text-muted)',
           textDecoration: 'none', letterSpacing: '0.1em',
         }}>{'← ALL CASES'}</a>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Visibility toggle — owners only */}
               {isOwner && (
             <button
@@ -304,7 +305,7 @@ export default function RunPage() {
         <div style={{
           display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
           background: 'rgba(74,158,255,0.08)', border: '1px solid rgba(74,158,255,0.2)',
-          borderRadius: '2px', marginBottom: '32px',
+          borderRadius: '2px', marginBottom: '32px', flexWrap: 'wrap',
         }}>
           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-blue)', display: 'inline-block', animation: 'pulse-amber 1s infinite' }} />
           <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--accent-blue)', letterSpacing: '0.08em' }}>
@@ -313,9 +314,9 @@ export default function RunPage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '32px', alignItems: 'start', marginBottom: '40px' }}>
+      <div className="run-detail-header" style={{ marginBottom: '40px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
             <span className={`badge badge-${run.status}`}>{run.status.toUpperCase()}</span>
             <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
               {new Date(run.created_at).toLocaleString()}
@@ -332,14 +333,14 @@ export default function RunPage() {
       </div>
 
       {run.status === 'completed' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '2px', marginBottom: '40px', overflow: 'hidden' }}>
+        <div className="stats-grid" style={{ marginBottom: '40px' }}>
           {[
             { label: 'Total Tests', value: run.results?.length ?? 0, color: 'var(--text-primary)' },
             { label: 'Passed',      value: passed.length,            color: 'var(--accent-green)' },
             { label: 'Failed',      value: failed.length,            color: failed.length > 0 ? 'var(--accent-red)' : 'var(--text-muted)' },
           ].map(stat => (
-            <div key={stat.label} style={{ background: 'var(--bg-card)', padding: '20px 24px' }}>
-              <div className="font-display" style={{ fontSize: '2.4rem', color: stat.color, lineHeight: 1 }}>{stat.value}</div>
+            <div key={stat.label} className="stats-grid__item">
+              <div className="font-display" style={{ fontSize: 'clamp(1.8rem, 4vw, 2.4rem)', color: stat.color, lineHeight: 1 }}>{stat.value}</div>
               <div className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase' as const, marginTop: '6px' }}>{stat.label}</div>
             </div>
           ))}
@@ -363,12 +364,11 @@ export default function RunPage() {
             borderRadius: '2px', overflow: 'hidden',
           }}>
             {run.crawled_pages.map((page, i) => (
-              <div key={i} style={{
+              <div key={i} className="crawled-row" style={{
                 background: 'var(--bg-card)', padding: '10px 16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                  <FileSearch size={12} color='var(--text-muted)' />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+                  <FileSearch size={12} color='var(--text-muted)' style={{ flexShrink: 0 }} />
                   <a href={page.url} target="_blank" rel="noopener noreferrer" style={{
                     fontFamily: 'IBM Plex Mono, monospace', fontSize: '0.75rem',
                     color: 'var(--accent-amber)', textDecoration: 'none',
@@ -377,7 +377,7 @@ export default function RunPage() {
                     {page.url.replace(/^https?:\/\//, '')}
                   </a>
                   {page.title && (
-                    <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' as const }}>
                       — {page.title}
                     </span>
                   )}
@@ -423,9 +423,8 @@ export default function RunPage() {
                   background: 'var(--bg-card)', border: '1px solid var(--border)',
                   borderLeft: `3px solid ${s.color}`, borderRadius: '2px', overflow: 'hidden',
                 }}>
-                  <div style={{
-                    padding: '16px 20px', display: 'flex',
-                    alignItems: 'center', justifyContent: 'space-between',
+                  <div className="finding-header" style={{
+                    padding: '16px 20px',
                     borderBottom: '1px solid var(--border)',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -444,7 +443,7 @@ export default function RunPage() {
                       { label: 'WHY',  value: finding.why,  color: 'var(--accent-amber)' },
                       { label: 'FIX',  value: finding.how,  color: 'var(--accent-green)' },
                     ].map(item => (
-                      <div key={item.label} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                      <div key={item.label} className="finding-detail-row">
                         <span className="font-mono" style={{
                           fontSize: '0.65rem', letterSpacing: '0.12em',
                           color: item.color, minWidth: '36px', marginTop: '3px', opacity: 0.8,
@@ -494,7 +493,7 @@ export default function RunPage() {
               const s = SEVERITY_STYLES[result.severity] ?? SEVERITY_STYLES.info;
               return (
                 <div key={result.test_id ?? i} style={{ background: 'var(--bg-card)', padding: '20px 24px', borderLeft: `3px solid ${s.color}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap' as const, gap: '8px' }}>
+                  <div className="finding-header" style={{ marginBottom: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span>{s.icon}</span>
                       <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-primary)' }}>{result.name}</span>
@@ -519,7 +518,7 @@ export default function RunPage() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '1px', background: 'var(--border)', border: '1px solid var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
             {passed.map((result, i) => (
-              <div key={result.test_id ?? i} style={{ background: 'var(--bg-card)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div key={result.test_id ?? i} style={{ background: 'var(--bg-card)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Check size={14} style={{ color: 'var(--accent-green)', marginRight: 6 }} />
                   <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{result.name}</span>
@@ -538,7 +537,7 @@ export default function RunPage() {
           </div>
           <ol style={{ listStyle: 'none', display: 'flex', flexDirection: 'column' as const, gap: '14px' }}>
             {run.recommendations.map((rec, i) => (
-              <li key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+              <li key={i} className="finding-detail-row">
                 <span className="font-mono" style={{ fontSize: '0.65rem', color: 'var(--accent-amber)', minWidth: '20px', marginTop: '3px' }}>
                   {String(i + 1).padStart(2, '0')}
                 </span>
@@ -553,7 +552,7 @@ export default function RunPage() {
 
       {(run.status === 'pending' || run.status === 'running') && (
         <div style={{ textAlign: 'center' as const, padding: '60px 0' }}>
-          <div className="font-display" style={{ fontSize: '3rem', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '0.05em' }}>
+          <div className="font-display" style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', color: 'var(--text-muted)', marginBottom: '16px', letterSpacing: '0.05em' }}>
             INVESTIGATING<span className="animate-blink">.</span>
           </div>
           <p className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
