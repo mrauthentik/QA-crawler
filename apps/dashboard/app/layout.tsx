@@ -26,7 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </a>
             <div className="header-right">
               <NavClient />
-              <AuthNav />
+              <div className="header-auth">
+                <AuthNav />
+              </div>
             </div>
           </header>
           <main>{children}</main>

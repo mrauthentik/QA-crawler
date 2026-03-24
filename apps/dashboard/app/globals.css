@@ -455,6 +455,16 @@ body::before {
   gap: 24px;
 }
 
+/* Auth nav wrapper — hidden on mobile (moved into hamburger) */
+.header-auth {
+  display: block;
+}
+
+/* Utility: hide on mobile */
+.hide-mobile {
+  display: flex;
+}
+
 /* Description text truncation on run list */
 .run-description {
   overflow: hidden;
@@ -534,13 +544,21 @@ body::before {
     padding: 32px 24px;
   }
 
-  /* Show hamburger, hide desktop nav */
+  /* Show hamburger, hide desktop nav + auth */
   .nav-mobile-toggle {
     display: block;
   }
 
   .nav-desktop {
     display: none;
+  }
+
+  .header-auth {
+    display: none !important;
+  }
+
+  .hide-mobile {
+    display: none !important;
   }
 
   .nav-mobile-menu.open {
