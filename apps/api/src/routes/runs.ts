@@ -28,7 +28,7 @@ const pipelineQueue = new Queue('pipeline', { connection });
 // ─── POST /api/runs ───────────────────────────────────────────────────────────
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { url, description } = req.body;
+    const { url, description, authEmail, authPassword, authLoginUrl } = req.body;
 
     if (!url || !description) {
       return res.status(400).json({ error: 'Both url and description are required' });
@@ -40,11 +40,11 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
 
-    const runId = await createTestRun(url, description, req.userId);
+    const runId = await createTestRun(url, description, req.userId, authEmail, authLoginUrl);
 
     await pipelineQueue.add(
       'run-pipeline',
-      { runId, url, description },
+      { runId, url, description, authEmail, authPassword, authLoginUrl },
       { attempts: 2, backoff: { type: 'exponential', delay: 5000 } }
     );
 

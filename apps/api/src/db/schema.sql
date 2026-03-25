@@ -45,3 +45,7 @@ ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false;
 
 -- Store multi-page crawl metadata
 ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS crawled_pages JSONB DEFAULT '[]';
+
+-- Store optional auth credentials for authenticated crawling
+ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS auth_email TEXT;
+ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS auth_login_url TEXT;
