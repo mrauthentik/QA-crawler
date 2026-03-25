@@ -390,7 +390,6 @@ export default function RunPage() {
                     {page.formsCount} forms
                   </span>
                 </div>
-              </div>
               {page.screenshot && (
                 <img
                   src={`${API_URL}${page.screenshot}`}
@@ -402,6 +401,7 @@ export default function RunPage() {
                   onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
               )}
+              </div>
             ))}
           </div>
         </div>

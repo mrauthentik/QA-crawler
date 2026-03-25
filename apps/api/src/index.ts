@@ -3,6 +3,7 @@ import { resolve } from 'path';
 dotenv.config({ path: resolve(__dirname, '../../.env') });
 
 import express from 'express';
+import helmet from 'helmet';
 import fs from 'fs';
 import path from 'path';
 import { initDb } from './db/index';
