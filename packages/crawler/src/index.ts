@@ -1,4 +1,5 @@
-import { chromium, Browser, Page } from 'playwright';
+import { chromium, Browser, Page, BrowserContext } from 'playwright';
+import { AuthCredentials, SiteCrawlOptions } from '@qa-detective/shared';
 
 export interface FormInfo {
   action: string;
@@ -12,6 +13,7 @@ export interface CrawlResult {
   links: string[];
   forms: FormInfo[];
   errors: string[];
+  authenticated?: boolean;
 }
 
 export interface SiteCrawlResult {
@@ -19,19 +21,42 @@ export interface SiteCrawlResult {
   pages: CrawlResult[];
   totalPages: number;
   skippedUrls: string[];
+  authenticated: boolean;
 }
 
 const IGNORED_EXTENSIONS = /\.(png|jpg|jpeg|gif|svg|ico|webp|pdf|zip|mp4|mp3|woff|woff2|ttf|css|js)(\?.*)?$/i;
 const MAX_PAGES_DEFAULT = 10;
 
+// Common selectors for login forms
+const EMAIL_SELECTORS = [
+  'input[type="email"]',
+  'input[name="email"]',
+  'input[name="username"]',
+  'input[id="email"]',
+  'input[placeholder*="email" i]',
+  'input[placeholder*="username" i]',
+];
+
+const PASSWORD_SELECTORS = [
+  'input[type="password"]',
+  'input[name="password"]',
+  'input[id="password"]',
+];
+
+const SUBMIT_SELECTORS = [
+  'button[type="submit"]',
+  'input[type="submit"]',
+  'button:has-text("Sign in")',
+  'button:has-text("Login")',
+  'button:has-text("Log in")',
+  'button:has-text("Continue")',
+];
+
 function normaliseUrl(raw: string, base: string): string | null {
   try {
     const url = new URL(raw, base);
-    // Strip hash — #section links are the same page
     url.hash = '';
-    // Strip trailing slash for deduplication
-    const href = url.href.replace(/\/$/, '');
-    return href;
+    return url.href.replace(/\/$/, '');
   } catch {
     return null;
   }
@@ -40,7 +65,6 @@ function normaliseUrl(raw: string, base: string): string | null {
 function getRootDomain(url: string): string {
   try {
     const hostname = new URL(url).hostname;
-    // Strip www. prefix for comparison
     return hostname.replace(/^www\./, '');
   } catch {
     return '';
@@ -52,9 +76,79 @@ function isSameOrigin(url: string, base: string): boolean {
     const urlDomain = getRootDomain(url);
     const baseDomain = getRootDomain(base);
     if (!urlDomain || !baseDomain) return false;
-    // Same root domain — treat www.example.com and example.com as same origin
     return urlDomain === baseDomain;
   } catch {
+    return false;
+  }
+}
+
+async function findSelector(page: Page, selectors: string[]): Promise<string | null> {
+  for (const selector of selectors) {
+    try {
+      const el = await page.$(selector);
+      if (el) return selector;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+async function performLogin(
+  page: Page,
+  loginUrl: string,
+  credentials: AuthCredentials
+): Promise<boolean> {
+  try {
+    console.log(`  🔑 Attempting login at ${loginUrl}...`);
+    await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+
+    // Find email/username field
+    const emailSelector = credentials.emailSelector
+      ?? await findSelector(page, EMAIL_SELECTORS);
+    if (!emailSelector) {
+      console.log('  ⚠️  Could not find email/username field');
+      return false;
+    }
+
+    // Find password field
+    const passwordSelector = credentials.passwordSelector
+      ?? await findSelector(page, PASSWORD_SELECTORS);
+    if (!passwordSelector) {
+      console.log('  ⚠️  Could not find password field');
+      return false;
+    }
+
+    // Find submit button
+    const submitSelector = credentials.submitSelector
+      ?? await findSelector(page, SUBMIT_SELECTORS);
+    if (!submitSelector) {
+      console.log('  ⚠️  Could not find submit button');
+      return false;
+    }
+
+    // Fill and submit
+    await page.fill(emailSelector, credentials.email);
+    await page.fill(passwordSelector, credentials.password);
+    await page.click(submitSelector);
+
+    // Wait for navigation after login
+    await page.waitForURL(url => url.href !== loginUrl, { timeout: 10000 }).catch(() => {});
+    await page.waitForLoadState('domcontentloaded');
+
+    // Check if login succeeded — if we're still on the login page, it failed
+    const currentUrl = page.url();
+    const stillOnLogin = normaliseUrl(currentUrl, loginUrl) === normaliseUrl(loginUrl, loginUrl);
+
+    if (stillOnLogin) {
+      console.log('  ⚠️  Login may have failed — still on login page');
+      return false;
+    }
+
+    console.log(`  ✅ Login successful — now at ${currentUrl}`);
+    return true;
+  } catch (err) {
+    console.log(`  ⚠️  Login failed: ${(err as Error).message}`);
     return false;
   }
 }
@@ -62,7 +156,8 @@ function isSameOrigin(url: string, base: string): boolean {
 async function crawlSinglePage(
   page: Page,
   url: string,
-  baseUrl: string
+  baseUrl: string,
+  authenticated = false
 ): Promise<CrawlResult> {
   const errors: string[] = [];
 
@@ -73,17 +168,18 @@ async function crawlSinglePage(
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
   } catch (err) {
-    return { url, title: '', links: [], forms: [], errors: [`Navigation failed: ${(err as Error).message}`] };
+    return {
+      url, title: '', links: [], forms: [], errors: [`Navigation failed: ${(err as Error).message}`],
+      authenticated,
+    };
   }
 
   const title = await page.title().catch(() => '');
 
   const links = await page.$$eval('a[href]', (anchors, base) =>
-    anchors
-      .map(a => {
-        try { return new URL((a as HTMLAnchorElement).href, base).href; } catch { return ''; }
-      })
-      .filter(Boolean),
+    anchors.map(a => {
+      try { return new URL((a as HTMLAnchorElement).href, base).href; } catch { return ''; }
+    }).filter(Boolean),
     baseUrl
   ).catch(() => [] as string[]);
 
@@ -97,13 +193,7 @@ async function crawlSinglePage(
     }))
   ).catch(() => [] as FormInfo[]);
 
-  return {
-    url,
-    title,
-    links: [...new Set(links)],
-    forms,
-    errors,
-  };
+  return { url, title, links: [...new Set(links)], forms, errors, authenticated };
 }
 
 // ─── Single page crawl (backwards compatible) ─────────────────────────────────
@@ -121,10 +211,11 @@ export async function crawlPage(url: string): Promise<CrawlResult> {
   }
 }
 
-// ─── Multi-page BFS crawl ─────────────────────────────────────────────────────
+// ─── Multi-page BFS crawl with optional auth ──────────────────────────────────
 export async function crawlSite(
   startUrl: string,
-  maxPages = MAX_PAGES_DEFAULT
+  maxPages = MAX_PAGES_DEFAULT,
+  options: SiteCrawlOptions = {}
 ): Promise<SiteCrawlResult> {
   const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
   const browser: Browser = await chromium.launch({
@@ -136,13 +227,32 @@ export async function crawlSite(
   const queue: string[] = [];
   const skippedUrls: string[] = [];
   const pages: CrawlResult[] = [];
+  let authenticated = false;
 
   const normalised = normaliseUrl(startUrl, startUrl);
   if (!normalised) throw new Error(`Invalid start URL: ${startUrl}`);
-
   queue.push(normalised);
 
+  // Create a persistent browser context to maintain session across pages
+  const context: BrowserContext = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (compatible; QADetective/1.0)',
+  });
+
   try {
+    // Perform login if credentials provided
+    if (options.auth) {
+      const loginPage = await context.newPage();
+      const loginUrl = options.auth.loginUrl ?? startUrl;
+      authenticated = await performLogin(loginPage, loginUrl, options.auth);
+      await loginPage.close();
+
+      if (authenticated) {
+        console.log('  🔓 Crawling authenticated pages...');
+      } else {
+        console.log('  ⚠️  Proceeding without authentication');
+      }
+    }
+
     while (queue.length > 0 && visited.size < maxPages) {
       const currentUrl = queue.shift()!;
 
@@ -155,12 +265,11 @@ export async function crawlSite(
       visited.add(currentUrl);
       console.log(`  🔗 Crawling [${visited.size}/${maxPages}]: ${currentUrl}`);
 
-      const page = await browser.newPage();
+      const page = await context.newPage();
       try {
-        const result = await crawlSinglePage(page, currentUrl, startUrl);
+        const result = await crawlSinglePage(page, currentUrl, startUrl, authenticated);
         pages.push(result);
 
-        // Enqueue same-origin links not yet visited
         for (const link of result.links) {
           const norm = normaliseUrl(link, startUrl);
           if (
@@ -180,12 +289,10 @@ export async function crawlSite(
       }
     }
 
-    // Track URLs we found but didn't visit due to maxPages cap
-    for (const url of queue) {
-      skippedUrls.push(url);
-    }
+    for (const url of queue) skippedUrls.push(url);
 
   } finally {
+    await context.close();
     await browser.close();
   }
 
@@ -194,5 +301,6 @@ export async function crawlSite(
     pages,
     totalPages: pages.length,
     skippedUrls: [...new Set(skippedUrls)],
+    authenticated,
   };
 }

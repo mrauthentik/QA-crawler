@@ -30,7 +30,7 @@ interface Run {
   completed_at?: string;
   is_public: boolean;
   user_id?: string;
-  crawled_pages?: Array<{ url: string; title: string; formsCount: number; linksCount: number }>;
+  crawled_pages?: Array<{ url: string; title: string; formsCount: number; linksCount: number; screenshot?: string }>;
   results: TestResult[];
   recommendations: string[];
   findings?: Array<{
@@ -390,6 +390,17 @@ export default function RunPage() {
                     {page.formsCount} forms
                   </span>
                 </div>
+              {page.screenshot && (
+                <img
+                  src={`${API_URL}${page.screenshot}`}
+                  alt={`Screenshot of ${page.url}`}
+                  style={{
+                    width: '100%', borderTop: '1px solid var(--border)',
+                    maxHeight: '200px', objectFit: 'cover' as const,
+                  }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              )}
               </div>
             ))}
           </div>

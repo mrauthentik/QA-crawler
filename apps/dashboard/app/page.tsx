@@ -21,6 +21,10 @@ export default function HomePage() {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showAuth, setShowAuth] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authLoginUrl, setAuthLoginUrl] = useState('');
 
   const handleSubmit = async () => {
     if (!url.trim()) {
@@ -45,6 +49,11 @@ export default function HomePage() {
         body: JSON.stringify({
           url: url.trim(),
           description: description.trim() || `Automated QA investigation of ${url.trim()}`,
+          ...(showAuth && authEmail && authPassword ? {
+            authEmail: authEmail.trim(),
+            authPassword,
+            authLoginUrl: authLoginUrl.trim() || undefined,
+          } : {}),
         }),
       });
 
@@ -243,6 +252,93 @@ export default function HomePage() {
           }}>
             More detail → better test cases from the AI
           </p>
+        </div>
+
+        {/* Optional auth credentials */}
+        <div style={{ marginTop: '24px' }}>
+          <button
+            onClick={() => setShowAuth(prev => !prev)}
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--border)',
+              borderRadius: '2px',
+              color: 'var(--text-muted)',
+              fontFamily: 'IBM Plex Mono, monospace',
+              fontSize: '0.7rem',
+              letterSpacing: '0.1em',
+              padding: '8px 16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            {showAuth ? '− HIDE LOGIN CREDENTIALS' : '+ ADD LOGIN CREDENTIALS'}
+          </button>
+          <p className="font-mono" style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: '6px', letterSpacing: '0.05em' }}>
+            Optional — lets QA Detective test authenticated pages and dashboards
+          </p>
+
+          {showAuth && (
+            <div style={{
+              marginTop: '16px',
+              padding: '20px',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '2px',
+              display: 'flex',
+              flexDirection: 'column' as const,
+              gap: '14px',
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label className="font-mono" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                    LOGIN EMAIL
+                  </label>
+                  <input
+                    type="email"
+                    className="input-dark"
+                    placeholder="test@example.com"
+                    value={authEmail}
+                    onChange={e => setAuthEmail(e.target.value)}
+                    disabled={loading}
+                    style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '0.85rem', width: '100%' }}
+                  />
+                </div>
+                <div>
+                  <label className="font-mono" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                    LOGIN PASSWORD
+                  </label>
+                  <input
+                    type="password"
+                    className="input-dark"
+                    placeholder="••••••••"
+                    value={authPassword}
+                    onChange={e => setAuthPassword(e.target.value)}
+                    disabled={loading}
+                    style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '0.85rem', width: '100%' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="font-mono" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
+                  LOGIN PAGE URL <span style={{ opacity: 0.6 }}>(optional — leave blank to auto-detect)</span>
+                </label>
+                <input
+                  type="url"
+                  className="input-dark"
+                  placeholder="https://yourapp.com/login"
+                  value={authLoginUrl}
+                  onChange={e => setAuthLoginUrl(e.target.value)}
+                  disabled={loading}
+                  style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '0.85rem', width: '100%' }}
+                />
+              </div>
+              <p className="font-mono" style={{ fontSize: '0.62rem', color: 'var(--accent-amber)', letterSpacing: '0.05em' }}>
+                ⚠ Use test credentials only — never your real password
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Error */}

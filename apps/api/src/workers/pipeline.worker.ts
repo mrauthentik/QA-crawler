@@ -32,7 +32,7 @@ const connection = getRedisConnection();
 export const pipelineWorker = new Worker(
     'pipeline',
     async (job) => {
-        const { runId, url, description } = job.data;
+        const { runId, url, description, authEmail, authPassword, authLoginUrl } = job.data;
         console.log(`\n🔄 Processing job ${job.id} for run ${runId}`);
 
         // Ensure screenshots dir exists
@@ -48,7 +48,14 @@ export const pipelineWorker = new Worker(
 
             // Phase 1: Multi-page crawl
       console.log(`📡 Crawling site: ${url}...`);
-      const siteCrawl = await crawlSite(url, 10);
+      const crawlOptions = authEmail && authPassword ? {
+        auth: {
+          email: authEmail,
+          password: authPassword,
+          loginUrl: authLoginUrl,
+        }
+      } : {};
+      const siteCrawl = await crawlSite(url, 10, crawlOptions);
       console.log(`📄 Crawled ${siteCrawl.totalPages} page(s): ${siteCrawl.pages.map(p => p.url).join(', ')}`);
       await job.updateProgress(30);
 
@@ -59,13 +66,42 @@ export const pipelineWorker = new Worker(
         pages: siteCrawl.pages,
         totalPages: siteCrawl.totalPages,
       });
-      // Save crawled pages metadata
-      await saveCrawledPages(runId, siteCrawl.pages.map(p => ({
-        url: p.url,
-        title: p.title,
-        formsCount: p.forms.length,
-        linksCount: p.links.length,
-      })));
+      // Save crawled pages metadata + take screenshots of each page
+      const { chromium } = await import('playwright');
+      const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+      const screenshotBrowser = await chromium.launch({
+        headless: true,
+        ...(executablePath ? { executablePath } : {}),
+      });
+
+      const pagesWithScreenshots = await Promise.all(
+        siteCrawl.pages.map(async (p, i) => {
+          const screenshotPath = `${SCREENSHOTS_DIR}/page-${runId}-${i}.png`;
+          try {
+            const pg = await screenshotBrowser.newPage();
+            await pg.goto(p.url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            await pg.screenshot({ path: screenshotPath, fullPage: false });
+            await pg.close();
+            return {
+              url: p.url,
+              title: p.title,
+              formsCount: p.forms.length,
+              linksCount: p.links.length,
+              screenshot: `/screenshots/page-${runId}-${i}.png`,
+            };
+          } catch {
+            return {
+              url: p.url,
+              title: p.title,
+              formsCount: p.forms.length,
+              linksCount: p.links.length,
+            };
+          }
+        })
+      );
+
+      await screenshotBrowser.close();
+      await saveCrawledPages(runId, pagesWithScreenshots);
 
       const testPlan = await generateTestPlan(description, crawlResult);
       await job.updateProgress(50);

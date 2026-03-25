@@ -44,12 +44,14 @@ export async function initDb(): Promise<void> {
 export async function createTestRun(
   url: string,
   description: string,
-  userId?: string
+  userId?: string,
+  authEmail?: string,
+  authLoginUrl?: string
 ): Promise<string> {
   const { rows } = await pool.query(
-    `INSERT INTO test_runs (url, description, status, user_id)
-     VALUES ($1, $2, 'pending', $3) RETURNING id`,
-    [url, description, userId ?? null]
+    `INSERT INTO test_runs (url, description, status, user_id, auth_email, auth_login_url)
+     VALUES ($1, $2, 'pending', $3, $4, $5) RETURNING id`,
+    [url, description, userId ?? null, authEmail ?? null, authLoginUrl ?? null]
   );
   return rows[0].id;
 }
@@ -193,7 +195,7 @@ export async function toggleRunVisibility(
 
 export async function saveCrawledPages(
   runId: string,
-  pages: Array<{ url: string; title: string; formsCount: number; linksCount: number }>
+  pages: Array<{ url: string; title: string; formsCount: number; linksCount: number; screenshot?: string }>
 ): Promise<void> {
   await pool.query(
     'UPDATE test_runs SET crawled_pages = $1 WHERE id = $2',
