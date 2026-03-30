@@ -25,7 +25,7 @@ export interface ExecutionResult {
 export interface TestCase {
   id: string;
   name: string;
-  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance';
+  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance' | 'load';
   priority: 'critical' | 'high' | 'medium' | 'low';
   steps: string[];
   expectedOutcome: string;

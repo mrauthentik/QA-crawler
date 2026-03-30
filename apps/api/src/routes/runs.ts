@@ -8,6 +8,7 @@ import {
   toggleRunVisibility,
 } from '../db/index';
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
+import { runCreationLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -26,7 +27,7 @@ const connection = getRedisConnection();
 const pipelineQueue = new Queue('pipeline', { connection });
 
 // ─── POST /api/runs ───────────────────────────────────────────────────────────
-router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/', runCreationLimiter, requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { url, description, authEmail, authPassword, authLoginUrl } = req.body;
 

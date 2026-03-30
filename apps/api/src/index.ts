@@ -60,7 +60,7 @@ async function start() {
 
     // ─── Rate limiting ─────────────────────────────────────────────────────────
     app.use('/api', apiLimiter);
-    app.use('/api/runs', runCreationLimiter);
+    // Run creation limiter applied only in the router on POST
 
     // ─── Health check ──────────────────────────────────────────────────────────
     app.get('/health', (_req, res) => {
