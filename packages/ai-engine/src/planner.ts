@@ -13,7 +13,7 @@ const client = new OpenAI({
 export interface TestCase {
   id: string;
   name: string;
-  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance' | 'accessibility';
+  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance' | 'accessibility' | 'load';
   priority: 'critical' | 'high' | 'medium' | 'low';
   steps: string[];
   expectedOutcome: string;
@@ -84,6 +84,12 @@ function extractJSON(raw: string): string {
   // Return the largest JSON block — that's the complete one
   return matches.sort((a, b) => b.length - a.length)[0];
 }
+
+const MANDATORY_LOAD_TEST = {
+  name: 'Load Test — Concurrent Users',
+  priority: 'high',
+  type: 'load',
+};
 
 const MANDATORY_ACCESSIBILITY_TEST = {
   name: 'Accessibility Compliance Check',
@@ -206,6 +212,10 @@ JSON structure:
       }
     }
 
+    // Inject load test if missing
+    if (!plan.cases.find((c) => c.type === 'load')) {
+      plan.cases.push({ id: `TC${String(plan.cases.length + 1).padStart(3, '0')}`, name: MANDATORY_LOAD_TEST.name, type: 'load', priority: 'high', steps: ['Simulate concurrent users'], expectedOutcome: 'Site handles load' });
+    }
     plan.totalTests = plan.cases.length;
 
     // Log distribution

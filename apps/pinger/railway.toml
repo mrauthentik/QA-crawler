@@ -1,0 +1,7 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "apps/pinger/Dockerfile"
+dockerContext = "."
+
+[deploy]
+restartPolicyType = "always"

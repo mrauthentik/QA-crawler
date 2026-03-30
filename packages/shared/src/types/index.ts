@@ -25,7 +25,7 @@ export interface ExecutionResult {
 export interface TestCase {
   id: string;
   name: string;
-  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance';
+  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance' | 'load';
   priority: 'critical' | 'high' | 'medium' | 'low';
   steps: string[];
   expectedOutcome: string;
@@ -50,4 +50,17 @@ export interface Finding {
   why: string;
   how: string;
   screenshot?: string;
+}
+export interface AuthCredentials {
+  email: string;
+  password: string;
+  loginUrl?: string;        // defaults to baseUrl if not provided
+  emailSelector?: string;   // CSS selector for email field, defaults to common patterns
+  passwordSelector?: string; // CSS selector for password field
+  submitSelector?: string;  // CSS selector for submit button
+}
+
+export interface SiteCrawlOptions {
+  maxPages?: number;
+  auth?: AuthCredentials;
 }

@@ -145,7 +145,7 @@ export default function RunsPage() {
   }
 
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '48px 32px' }}>
+    <div className="page-container">
 
       {/* Toast notifications */}
       <div style={{
@@ -220,13 +220,8 @@ export default function RunsPage() {
           borderRadius: '2px',
         }}>
           {runs.map(run => (
-            <div key={run.id} style={{
+            <div key={run.id} className="run-row" style={{
               background: deletingId === run.id ? 'rgba(239,68,68,0.05)' : 'var(--bg-card)',
-              display: 'grid',
-              gridTemplateColumns: '1fr auto auto',
-              gap: '16px',
-              alignItems: 'center',
-              padding: '20px 24px',
               transition: 'background 0.15s',
               opacity: deletingId === run.id ? 0.5 : 1,
             }}>
@@ -235,7 +230,7 @@ export default function RunsPage() {
               <a href={`/runs/${run.id}`} style={{
                 textDecoration: 'none', minWidth: 0,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
                   <span className={`badge badge-${run.status ?? 'pending'}`}>
                     {(run.status ?? 'pending').toUpperCase()}
                   </span>
@@ -251,10 +246,8 @@ export default function RunsPage() {
                 }}>
                   {run.url.replace(/^https?:\/\//, '')}
                 </div>
-                <div className="font-mono" style={{
+                <div className="font-mono run-description" style={{
                   fontSize: '0.72rem', color: 'var(--text-muted)',
-                  overflow: 'hidden', textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap' as const, maxWidth: '500px',
                 }}>
                   {run.description}
                 </div>
@@ -345,7 +338,7 @@ export default function RunsPage() {
                       },
                     ].map(action => (
                       <button
-                        key={action.label}
+                        key={action.label ?? action.text}
                         onClick={action.onClick}
                         disabled={action.disabled}
                         style={{

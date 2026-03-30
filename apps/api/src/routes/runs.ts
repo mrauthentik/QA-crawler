@@ -8,20 +8,28 @@ import {
   toggleRunVisibility,
 } from '../db/index';
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
+import { runCreationLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
-const connection = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-};
+function getRedisConnection() {
+  if (process.env.REDIS_URL) {
+    return { url: process.env.REDIS_URL };
+  }
+  return {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+  };
+}
+
+const connection = getRedisConnection();
 
 const pipelineQueue = new Queue('pipeline', { connection });
 
 // ─── POST /api/runs ───────────────────────────────────────────────────────────
-router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/', runCreationLimiter, requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const { url, description } = req.body;
+    const { url, description, authEmail, authPassword, authLoginUrl } = req.body;
 
     if (!url || !description) {
       return res.status(400).json({ error: 'Both url and description are required' });
@@ -33,11 +41,11 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
 
-    const runId = await createTestRun(url, description, req.userId);
+    const runId = await createTestRun(url, description, req.userId, authEmail, authLoginUrl);
 
     await pipelineQueue.add(
       'run-pipeline',
-      { runId, url, description },
+      { runId, url, description, authEmail, authPassword, authLoginUrl },
       { attempts: 2, backoff: { type: 'exponential', delay: 5000 } }
     );
 
