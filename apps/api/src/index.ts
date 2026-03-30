@@ -19,6 +19,7 @@ const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || path.join(__dirname, '../
 async function start() {
   try {
     // ─── Security headers ──────────────────────────────────────────────────────
+    app.use(helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }));
     app.use(helmet({
       contentSecurityPolicy: {
         directives: {

@@ -42,30 +42,32 @@ export default function () {
 
 function parseK6Output(output: string): K6Metrics | null {
   try {
-    const lines = output.split('\n').filter(Boolean);
-    const summaryLine = lines.find(l => l.includes('"type":"summary"'));
-    if (!summaryLine) return null;
-    const summary = JSON.parse(summaryLine);
-    const m = summary.data?.metrics;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let m: any;
+    const trimmed = output.trim();
+    const summary = JSON.parse(trimmed);
+    // k6 summary export format has metrics at top level
+    m = summary.metrics ?? summary.data?.metrics;
     if (!m) return null;
+    const dur = m['http_req_duration'] ?? m['http_req_duration{expected_response:true}'];
     return {
       http_req_duration: {
-        avg: m.http_req_duration?.values?.avg ?? 0,
-        p95: m.http_req_duration?.values?.['p(95)'] ?? 0,
-        max: m.http_req_duration?.values?.max ?? 0,
+        avg: dur?.values?.avg ?? dur?.avg ?? 0,
+        p95: dur?.values?.['p(95)'] ?? dur?.['p(95)'] ?? 0,
+        max: dur?.values?.max ?? dur?.max ?? 0,
       },
       http_req_failed: {
-        rate: m.http_req_failed?.values?.rate ?? 0,
+        rate: m.http_req_failed?.values?.rate ?? m.http_req_failed?.rate ?? 0,
       },
       http_reqs: {
-        rate: m.http_reqs?.values?.rate ?? 0,
-        count: m.http_reqs?.values?.count ?? 0,
+        rate: m.http_reqs?.values?.rate ?? m.http_reqs?.rate ?? 0,
+        count: m.http_reqs?.values?.count ?? m.http_reqs?.count ?? 0,
       },
       vus_max: {
-        value: m.vus_max?.values?.value ?? 0,
+        value: m.vus_max?.values?.value ?? m.vus_max?.value ?? 0,
       },
       iterations: {
-        count: m.iterations?.values?.count ?? 0,
+        count: m.iterations?.values?.count ?? m.iterations?.count ?? 0,
       },
     };
   } catch {
@@ -106,14 +108,21 @@ export async function runLoadTest(
     // Run k6 with JSON output
     let output = '';
     try {
+      const summaryPath = `/tmp/k6-summary-${testCase.id}-${Date.now()}.json`;
       output = execSync(
-        `k6 run --out json=- --summary-export=/dev/stdout ${scriptPath}`,
+        `k6 run --summary-export=${summaryPath} ${scriptPath}`,
         {
-          timeout: 120000, // 2 minute timeout
+          timeout: 120000,
           encoding: 'utf8',
           stdio: ['pipe', 'pipe', 'pipe'],
         }
       );
+      // Read summary from file
+      if (existsSync(summaryPath)) {
+        output = require('fs').readFileSync(summaryPath, 'utf8');
+
+        unlinkSync(summaryPath);
+      }
     } catch (execErr: unknown) {
       // k6 exits with non-zero if thresholds fail — that's expected
       const err = execErr as { stdout?: string; stderr?: string };
@@ -171,7 +180,10 @@ export async function runLoadTest(
         name: testCase.name,
         status: 'failed',
         severity,
-        message: issues.join(' | ') + ` | ${summary}`,
+        message: issues.join(' | ') + ` — ` +
+        `Tested with ${vus} concurrent users over 40 seconds. ` +
+        `Avg: ${avgMs}ms | p95: ${p95}ms | Throughput: ${reqPerSec} req/s | ` +
+        `Total requests: ${totalReqs} | Error rate: ${errorRate}%`,
         duration: Date.now() - start,
         metadata: { vus, p95, avgMs, errorRate, reqPerSec, totalReqs },
       };
@@ -182,7 +194,10 @@ export async function runLoadTest(
       name: testCase.name,
       status: 'passed',
       severity: 'info',
-      message: `Site handled ${vus} concurrent users. ${summary}`,
+      message: `✅ Load test passed — ${vus} concurrent users handled without issues. ` +
+        `Avg response: ${avgMs}ms | p95: ${p95}ms | Throughput: ${reqPerSec} req/s | ` +
+        `Total requests: ${totalReqs} | Error rate: ${errorRate}% | ` +
+        `All responses within acceptable thresholds.`,
       duration: Date.now() - start,
       metadata: { vus, p95, avgMs, errorRate, reqPerSec, totalReqs },
     };
