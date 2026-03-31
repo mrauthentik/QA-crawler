@@ -6,11 +6,12 @@ import { runSecurityTest } from './runners/security';
 import { runFunctionalTest } from './runners/functional';
 import { runFormTest } from './runners/form';
 import { runAccessibilityTest } from './runners/accessibility';
+import { runLoadTest } from './runners/load';
 
 export interface TestCase {
   id: string;
   name: string;
-  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance' | 'accessibility';
+  type: 'functional' | 'navigation' | 'form' | 'security' | 'performance' | 'accessibility' | 'load';
   priority: 'critical' | 'high' | 'medium' | 'low';
   steps: string[];
   expectedOutcome: string;
@@ -68,6 +69,13 @@ export async function executeTestPlan(
         case 'accessibility':
           result = await runAccessibilityTest(page, testCase, url);
           break;
+        case 'load':
+          await page.close();
+          result = await runLoadTest(testCase, url);
+          await browser.close();
+          results.push(result);
+          console.log(`  ${result.status === 'passed' ? '✅' : '❌'} ${result.status.toUpperCase()} — ${result.message.slice(0, 80)}`);
+          continue;
         case 'functional':
         default:
           result = await runFunctionalTest(page, testCase, url);

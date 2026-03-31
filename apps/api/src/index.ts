@@ -19,6 +19,7 @@ const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR || path.join(__dirname, '../
 async function start() {
   try {
     // ─── Security headers ──────────────────────────────────────────────────────
+    app.use(helmet.crossOriginResourcePolicy({ policy: 'cross-origin' }));
     app.use(helmet({
       contentSecurityPolicy: {
         directives: {
@@ -60,7 +61,7 @@ async function start() {
 
     // ─── Rate limiting ─────────────────────────────────────────────────────────
     app.use('/api', apiLimiter);
-    app.use('/api/runs', runCreationLimiter);
+    // Run creation limiter applied only in the router on POST
 
     // ─── Health check ──────────────────────────────────────────────────────────
     app.get('/health', (_req, res) => {

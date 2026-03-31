@@ -161,8 +161,13 @@ export const pipelineWorker = new Worker(
       });
       throw err;
         }
-    }, {connection}
-
+    }, {
+    connection,
+    lockDuration: 300000,      // 5 minutes — long enough for k6 load test
+    lockRenewTime: 60000,      // Renew every 60 seconds
+    stalledInterval: 60000,    // Check for stalled jobs every 60 seconds
+    maxStalledCount: 3,        // Allow 3 stall renewals before marking failed
+}
 )
 
 pipelineWorker.on('completed', job=> {
