@@ -19,6 +19,7 @@ from agents.browser import BrowserAgent
 from agents.secret_scanner import SecretScanner
 from agents.api_scanner import ApiScanner
 from agents.devtools import DevToolsAgent
+from agents.dashboard import run_dashboard_tests
 
 async def run(url: str, auth_email: str = None, auth_password: str = None, auth_login_url: str = None) -> dict:
     results = []
@@ -58,6 +59,18 @@ async def run(url: str, auth_email: str = None, auth_password: str = None, auth_
         api_scanner = ApiScanner(agent.page, devtools_agent.network_requests)
         api_results = await api_scanner.scan()
         results.extend(api_results)
+
+        # Dashboard testing — only if authenticated
+        if auth_email and auth_password:
+            # Get list of pages to test from crawled links
+            all_links = await agent.page.evaluate('''() => {
+                return Array.from(document.querySelectorAll("a[href]"))
+                    .map(a => a.href)
+                    .filter(h => h.startsWith(window.location.origin))
+                    .slice(0, 5);
+            }''')
+            dashboard_results = await run_dashboard_tests(agent.page, [url] + all_links[:4])
+            results.extend(dashboard_results)
 
         # Cookie security
         cookie_results = await agent.check_cookies()

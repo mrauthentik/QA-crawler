@@ -290,7 +290,7 @@ export default function HomePage() {
               flexDirection: 'column' as const,
               gap: '14px',
             }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div className="auth-creds-grid">
                 <div>
                   <label className="font-mono" style={{ fontSize: '0.62rem', letterSpacing: '0.12em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
                     LOGIN EMAIL
@@ -361,7 +361,7 @@ export default function HomePage() {
         )}
 
         {/* Submit */}
-        <div className="submit-row">
+        <div className="submit-row" style={{ marginTop: 0 }}>
           <button
             className="btn-primary"
             onClick={handleSubmit}
@@ -383,7 +383,7 @@ export default function HomePage() {
             ) : (
               <>
                 <ArrowRight size={14} />
-                <span style={{ marginLeft: 8 }}>OPEN CASE</span>
+                OPEN CASE
               </>
             )}
           </button>
