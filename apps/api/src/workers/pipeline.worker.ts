@@ -5,9 +5,10 @@ dotenv.config({path: resolve(__dirname, '../../../.env')})
 import { Worker } from 'bullmq'
 import fs from 'fs'
 import path from 'path'
-import { crawlSite } from '@qa-detective/crawler';
+import { crawlSite, detectLoginUrl } from '@qa-detective/crawler';
 import { generateTestPlan, flattenSiteCrawl } from '@qa-detective/ai-engine';
 import { executeTestPlan } from '@qa-detective/executor';
+import { runSecurityAgent } from '@qa-detective/executor/src/runners/security-agent';
 import { generateReport } from '@qa-detective/reporter';
 import {
     updateTestRun,
@@ -48,11 +49,23 @@ export const pipelineWorker = new Worker(
 
             // Phase 1: Multi-page crawl
       console.log(`📡 Crawling site: ${url}...`);
+      // Auto-detect login URL from crawled links if not provided
+      let resolvedLoginUrl = authLoginUrl;
+      if (authEmail && authPassword && !resolvedLoginUrl) {
+        // Quick single-page crawl to find login link
+        const { crawlPage } = await import('@qa-detective/crawler');
+        const homeCrawl = await crawlPage(url);
+        resolvedLoginUrl = detectLoginUrl(homeCrawl.links, url) ?? undefined;
+        if (resolvedLoginUrl) {
+          console.log(`🔑 Auto-detected login page: ${resolvedLoginUrl}`);
+        }
+      }
+
       const crawlOptions = authEmail && authPassword ? {
         auth: {
           email: authEmail,
           password: authPassword,
-          loginUrl: authLoginUrl,
+          loginUrl: resolvedLoginUrl,
         }
       } : {};
       const siteCrawl = await crawlSite(url, 10, crawlOptions);
@@ -110,6 +123,27 @@ export const pipelineWorker = new Worker(
       console.log('🔬 Executing tests...');
       const executionResult = await executeTestPlan(url, testPlan.cases, SCREENSHOTS_DIR);
       await job.updateProgress(75);
+
+      // Phase 3b: Python security agent
+      console.log('🐍 Running Python security agent...');
+      try {
+        const agentResults = await runSecurityAgent(
+          { id: 'SA000', name: 'Deep Security Analysis' },
+          url,
+          authEmail,
+          authPassword,
+          authLoginUrl,
+        );
+        // Merge agent results into execution results
+        executionResult.results.push(...agentResults);
+        executionResult.totalTests += agentResults.length;
+        executionResult.passed += agentResults.filter(r => r.status === 'passed').length;
+        executionResult.failed += agentResults.filter(r => r.status === 'failed').length;
+        console.log(`🐍 Security agent found ${agentResults.filter(r => r.status === 'failed').length} issue(s)`);
+      } catch (err) {
+        console.error('🐍 Security agent error:', (err as Error).message);
+      }
+      await job.updateProgress(80);
 
       // Phase 4: Generate report
       console.log('📝 Generating report...');

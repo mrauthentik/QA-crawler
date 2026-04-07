@@ -127,10 +127,30 @@ async function performLogin(
       return false;
     }
 
+    // Dismiss overlays before clicking
+    await page.evaluate(() => {
+      const overlays = document.querySelectorAll(
+        '[class*="fixed"][class*="bottom"], [class*="fixed"][class*="z-50"], ' +
+        '[class*="cookie"], [class*="consent"], [class*="banner"], ' +
+        '[class*="toast"], [class*="notification"], [class*="popup"]'
+      );
+      overlays.forEach((el: Element) => el.remove());
+    });
+    await page.waitForTimeout(300);
+
     // Fill and submit
     await page.fill(emailSelector, credentials.email);
     await page.fill(passwordSelector, credentials.password);
-    await page.click(submitSelector);
+
+    // Force click — bypass any remaining overlays
+    try {
+      await page.click(submitSelector, { force: true, timeout: 10000 });
+    } catch {
+      await page.evaluate((sel: string) => {
+        const btn = document.querySelector(sel) as HTMLElement;
+        if (btn) btn.click();
+      }, submitSelector);
+    }
 
     // Wait for navigation after login
     await page.waitForURL(url => url.href !== loginUrl, { timeout: 10000 }).catch(() => {});
@@ -194,6 +214,21 @@ async function crawlSinglePage(
   ).catch(() => [] as FormInfo[]);
 
   return { url, title, links: [...new Set(links)], forms, errors, authenticated };
+}
+
+// ─── Auto-detect login page from crawled links ───────────────────────────────────
+export function detectLoginUrl(links: string[], baseUrl: string): string | null {
+  const loginPatterns = [
+    /\/login$/i, /\/auth$/i, /\/signin$/i, /\/sign-in$/i,
+    /\/log-in$/i, /\/account\/login/i, /\/user\/login/i,
+    /\/auth\/login/i, /\/auth\/signin/i,
+  ];
+
+  for (const pattern of loginPatterns) {
+    const match = links.find(l => pattern.test(l));
+    if (match) return match;
+  }
+  return null;
 }
 
 // ─── Single page crawl (backwards compatible) ─────────────────────────────────

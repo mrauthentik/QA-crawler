@@ -364,10 +364,8 @@ export default function RunPage() {
             borderRadius: '2px', overflow: 'hidden',
           }}>
             {run.crawled_pages.map((page, i) => (
-              <div key={i} className="crawled-row" style={{
-                background: 'var(--bg-card)', padding: '10px 16px',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+              <div key={i} className="crawled-row">
+                <div className="crawled-row-left">
                   <FileSearch size={12} color='var(--text-muted)' style={{ flexShrink: 0 }} />
                   <a href={page.url} target="_blank" rel="noopener noreferrer" style={{
                     fontFamily: 'IBM Plex Mono, monospace', fontSize: '0.75rem',
@@ -377,7 +375,11 @@ export default function RunPage() {
                     {page.url.replace(/^https?:\/\//, '')}
                   </a>
                   {page.title && (
-                    <span style={{ fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' as const }}>
+                    <span style={{ 
+                      fontFamily: 'IBM Plex Sans, sans-serif', fontSize: '0.75rem', 
+                      color: 'var(--text-muted)', whiteSpace: 'nowrap' as const,
+                      overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1
+                    }}>
                       — {page.title}
                     </span>
                   )}
