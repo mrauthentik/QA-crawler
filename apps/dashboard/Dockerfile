@@ -1,0 +1,25 @@
+FROM node:20-slim
+
+RUN npm install -g pnpm@10.31.0
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/ ./packages/
+COPY apps/dashboard/ ./apps/dashboard/
+
+RUN pnpm install --frozen-lockfile
+
+# Bake public URLs into the build
+ENV NEXT_PUBLIC_API_URL=https://qa-detective-api-production.up.railway.app
+ENV NEXT_PUBLIC_AUTH_URL=https://qa-detective-auth-production.up.railway.app
+
+RUN cd apps/dashboard && pnpm run build
+
+WORKDIR /app/apps/dashboard
+
+EXPOSE 10000
+ENV PORT=10000
+ENV HOSTNAME=0.0.0.0
+
+CMD ["pnpm", "run", "start"]
