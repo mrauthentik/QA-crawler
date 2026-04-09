@@ -1,0 +1,49 @@
+{
+    "name": "qa-detective-cli",
+    "version": "1.0.1",
+    "description": "QA Detective CLI for scanning web apps (security, performance, accessibility, etc) ",
+    "bin": {
+        "qa-detective": "dist/index.js"
+    },
+    "keywords": [
+        "qa",
+        "security",
+        "performance",
+        "accessibility",
+        "lighthouse",
+        "artillery",
+        "testing",
+        "cli"
+    ],
+    "author": "https://github.com/mrauthentik/QA-crawler",
+    "license": "MIT",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "dev": "ts-node src/index.ts",
+        "test": "echo \"No tests yet\"",
+        "postinstall": "puppeteer browsers install chrome"
+    },
+    "dependencies": {
+        "chalk": "^5.3.0",
+        "commander": "^11.0.0",
+        "ora": "^7.0.1",
+        "puppeteer": "^24.40.0"
+    },
+    "devDependencies": {
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.3"
+    },
+    "files": [
+        "dist"
+    ],
+    "publishConfig": {
+        "access": "public"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "license": "MIT"
+}
