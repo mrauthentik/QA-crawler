@@ -49,7 +49,7 @@ class BrowserAgent:
             await self.playwright.stop()
 
     async def navigate(self, url: str):
-        await self.page.goto(url, wait_until='networkidle', timeout=30000)
+        await self.page.goto(url, wait_until='networkidle', timeout=60000)
 
     async def login(self, login_url: str, email: str, password: str) -> bool:
         try:
