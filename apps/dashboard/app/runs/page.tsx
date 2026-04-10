@@ -207,7 +207,7 @@ export default function RunsPage() {
           }}>
             NO CASES ON FILE
           </div>
-          <a href="/" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none' }}>
+          <a href="/new-run" className="btn-primary" style={{ display: 'inline-block', textDecoration: 'none' }}>
             {'→ OPEN FIRST CASE'}
           </a>
         </div>

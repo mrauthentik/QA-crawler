@@ -298,12 +298,99 @@ body::before {
 
 .site-footer {
   border-top: 1px solid var(--border);
-  padding: 24px 32px;
-  margin-top: 80px;
+  padding: 28px 32px;
+  margin-top: 96px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245, 166, 35, 0.06) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  backdrop-filter: blur(10px);
+  position: relative;
+}
+
+.site-footer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0,0,0,0.03) 3px,
+    rgba(0,0,0,0.03) 6px
+  );
+  opacity: 0.35;
+}
+
+.footer-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-brand__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-brand__name {
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+.footer-brand__tagline {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  letter-spacing: 0.18em;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.footer-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.footer-link:hover {
+  color: var(--accent-amber);
+  border-color: rgba(245, 166, 35, 0.25);
+  background: rgba(245, 166, 35, 0.06);
+}
+
+.footer-bottom {
+  position: relative;
+  z-index: 1;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -508,11 +595,19 @@ body::before {
   }
 
   .site-footer {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
     padding: 20px 16px;
     margin-top: 48px;
+  }
+
+  .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .footer-bottom {
+    justify-content: flex-start;
+    gap: 10px;
   }
 
   .page-container {
@@ -612,6 +707,10 @@ body::before {
   .site-header {
     padding: 0 12px;
     height: 50px;
+  }
+
+  .footer-links {
+    gap: 10px;
   }
 
   .page-container {
