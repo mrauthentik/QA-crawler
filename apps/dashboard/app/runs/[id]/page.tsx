@@ -220,11 +220,11 @@ export default function RunPage() {
         <AlertCircle size={16} />
         <span>{error || 'Run not found'}</span>
       </div>
-      <button onClick={() => router.push('/')} style={{
+      <button onClick={() => router.push('/new-run')} style={{
         marginTop: '24px', background: 'transparent', border: '1px solid var(--border)',
         color: 'var(--text-secondary)', fontFamily: 'IBM Plex Mono, monospace',
         fontSize: '0.75rem', padding: '10px 20px', cursor: 'pointer', letterSpacing: '0.1em',
-      }}>{'← BACK TO HOME'}</button>
+      }}>{'→ OPEN NEW CASE'}</button>
     </div>
   );
 

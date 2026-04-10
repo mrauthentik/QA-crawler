@@ -31,12 +31,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </header>
           <main>{children}</main>
           <footer className="site-footer">
-            <span className="font-mono footer-text">
-              QA DETECTIVE v0.1.0 — AUTONOMOUS TESTING INTELLIGENCE
-            </span>
-            <span className="font-mono footer-text">
-              POWERED BY GROQ + PLAYWRIGHT
-            </span>
+            <div className="footer-inner">
+              <div className="footer-brand">
+                <div className="footer-brand__row">
+                  <Fingerprint size={18} />
+                  <span className="font-display footer-brand__name">QA DETECTIVE</span>
+                </div>
+                <div className="font-mono footer-text footer-brand__tagline">
+                  AUTONOMOUS TESTING INTELLIGENCE
+                </div>
+              </div>
+
+              <div className="footer-links">
+                <a className="font-mono footer-link" href="/docs">Docs</a>
+                <a className="font-mono footer-link" href="/about">About</a>
+                <a className="font-mono footer-link" href="/donate">Donate</a>
+              </div>
+            </div>
+
+            <div className="footer-bottom">
+              <span className="font-mono footer-text">© {new Date().getFullYear()} QA DETECTIVE</span>
+              <span className="font-mono footer-text">v0.1.0</span>
+            </div>
           </footer>
         </div>
       </body>

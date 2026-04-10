@@ -15,45 +15,28 @@ export default function NavClient() {
     transition: 'color 0.2s',
   };
 
-  const statusIndicator = (
-    <span style={{
-      fontFamily: 'IBM Plex Mono, monospace',
-      fontSize: '0.65rem',
-      color: 'var(--accent-green)',
-      letterSpacing: '0.08em',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-    }}>
-      <span style={{
-        width: '6px',
-        height: '6px',
-        borderRadius: '50%',
-        background: 'var(--accent-green)',
-        display: 'inline-block',
-        animation: 'pulse-amber 2s infinite',
-      }} />
-      SYSTEM ONLINE
-    </span>
-  );
+  const links = [
+    { href: '/new-run', label: 'New Run' },
+    { href: '/runs', label: 'History' },
+    { href: '/docs', label: 'Docs' },
+    { href: '/about', label: 'About' },
+  ];
 
   return (
     <>
       {/* Desktop nav */}
       <nav className="nav-desktop">
-        <a href="/" style={linkStyle}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent-amber)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-        >
-          New Run
-        </a>
-        <a href="/runs" style={linkStyle}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent-amber)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
-        >
-          History
-        </a>
-        {statusIndicator}
+        {links.map(link => (
+          <a
+            key={link.href}
+            href={link.href}
+            style={linkStyle}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent-amber)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
+          >
+            {link.label}
+          </a>
+        ))}
       </nav>
 
       {/* Mobile hamburger button */}
@@ -67,13 +50,11 @@ export default function NavClient() {
 
       {/* Mobile nav menu */}
       <div className={`nav-mobile-menu ${menuOpen ? 'open' : ''}`}>
-        <a href="/" style={linkStyle} onClick={() => setMenuOpen(false)}>
-          New Run
-        </a>
-        <a href="/runs" style={linkStyle} onClick={() => setMenuOpen(false)}>
-          History
-        </a>
-        {statusIndicator}
+        {links.map(link => (
+          <a key={link.href} href={link.href} style={linkStyle} onClick={() => setMenuOpen(false)}>
+            {link.label}
+          </a>
+        ))}
       </div>
     </>
   );
