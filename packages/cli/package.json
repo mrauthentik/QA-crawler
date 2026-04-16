@@ -1,6 +1,6 @@
 {
     "name": "qa-detective-cli",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "QA Detective CLI for scanning web apps (security, performance, accessibility, etc) ",
     "bin": {
         "qa-detective": "dist/index.js"
@@ -44,6 +44,5 @@
     },
     "engines": {
         "node": ">=18.0.0"
-    },
-    "license": "MIT"
+    }
 }
