@@ -49,8 +49,11 @@ class BrowserAgent:
             await self.playwright.stop()
 
     async def navigate(self, url: str):
-        await self.page.goto(url, wait_until='networkidle', timeout=60000)
-
+        try:
+            await self.page.goto(url, wait_until='networkidle', timeout=120000)
+            # await self.page.goto(url, wait_until='domcontentloaded', timeout=20000)
+        except TimeoutError:
+            print(f"Warning: Timeout loading {url}, but continuing...")
     async def login(self, login_url: str, email: str, password: str) -> bool:
         try:
             await self.page.goto(login_url, wait_until='domcontentloaded', timeout=20000)
