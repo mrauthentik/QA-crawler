@@ -1,5 +1,23 @@
 import { spawn } from 'child_process';
 import path from 'path';
+import { execSync } from 'child_process';
+
+function getPythonCommand(): string {
+  // Try python3 first, then python, then wsl python3
+  const candidates = ['python3', 'python', 'wsl python3'];
+  for (const cmd of candidates) {
+    try {
+      execSync(`${cmd} --version`, { stdio: 'pipe' });
+      return cmd;
+    } catch {
+      continue;
+    }
+  }
+  throw new Error(
+    'Python not found. Please install Python 3.8+ or run this command from WSL terminal.\n' +
+    'Install: https://www.python.org/downloads/'
+  );
+}
 
 export interface ScanOptions {
   url: string;
@@ -36,7 +54,8 @@ export function runScan(options: ScanOptions): Promise<any> {
     }
 
     // Spawn the Python process
-    const proc = spawn('python3', args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const pythonCmd = getPythonCommand();
+    const proc = spawn(pythonCmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
 
