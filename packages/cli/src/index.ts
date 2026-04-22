@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { runScan } from './scanRunner';
+import { createTunnel, isLocalUrl, extractPort } from './tunnel';
 import fs from 'fs';
 import { generatePdfReport } from './pdfReport';
 
@@ -44,22 +45,67 @@ program
   .option('-t, --timeout <ms>', 'Navigation timeout in milliseconds (default: 30000)', '30000')
   .option('-H, --header <header...>', 'Custom HTTP headers (repeatable, e.g., -H "Authorization: Bearer ...")')
   .option('--fail-on <severity>', 'Exit with code 1 if severity found (e.g., critical,high)')
+  .option('--token <token>', 'QA Detective API token (or set QA_DETECTIVE_TOKEN env var)')
+  .option('--local', 'Run scan locally using Python agent (requires Python 3.8+)')
   
   //this take care of the scan logic and output handling
   .action(async (url, options) => {
     const spinner = ora('Scanning...').start();
+    let activeTunnel: { publicUrl: string; close: () => void } | null = null;
     try {
+      // Handle localhost URLs — create tunnel so API can reach it
+      let scanUrl = url;
+
+      if (isLocalUrl(url)) {
+        spinner.text = 'localhost detected — creating public tunnel...';
+        try {
+          const port = extractPort(url);
+          activeTunnel = await createTunnel(port);
+          scanUrl = activeTunnel.publicUrl;
+          spinner.text = `Tunnel created: ${scanUrl}`;
+          console.log('\n' + chalk.cyan(`  🔗 Tunnel: ${url} → ${scanUrl}`));
+          // Give tunnel a moment to stabilise
+          await new Promise(r => setTimeout(r, 1500));
+        } catch (err) {
+          spinner.warn(chalk.yellow('Could not create tunnel — trying direct scan'));
+          scanUrl = url;
+        }
+      }
+
+      // Update spinner with progress
+      const onProgress = (status: string) => {
+        const messages: Record<string, string> = {
+          queued: 'Run queued — waiting for worker...',
+          running: 'Investigation in progress — crawling and testing...',
+          completed: 'Analysis complete!',
+          failed: 'Run failed',
+        };
+        spinner.text = messages[status] || `Status: ${status}`;
+      };
+
+      if (options.token) process.env.QA_DETECTIVE_TOKEN = options.token;
+
       const result = await runScan({
-        url,
+        url: scanUrl,
         authEmail: options.authEmail,
         authPassword: options.authPassword,
         authLoginUrl: options.authLoginUrl,
         checks: options.checks,
         maxPages: options.maxPages,
         timeout: options.timeout,
-        headers: options.header
-      });
+        headers: options.header,
+      }, onProgress);
+      if (activeTunnel) activeTunnel.close();
       spinner.succeed(chalk.green('Scan completed! 🚀'));
+      if (result.grade) {
+        console.log(chalk.bold(`\nGrade: ${result.grade} | Score: ${result.score}/100`));
+      }
+      if (result.summary) {
+        console.log(chalk.gray(`\nSummary: ${result.summary}\n`));
+      }
+      if (result.reportUrl) {
+        console.log(chalk.cyan(`Full report: ${result.reportUrl}\n`));
+      }
 
       // Handle --output flag
       if (options.output) {
@@ -76,7 +122,7 @@ program
       } else {
         // Pretty-print results with colored severities (one per line)
         if (result && result.results && Array.isArray(result.results)) {
-          for (const r of result.results) {
+          for (const r of (result.results as any[])) {
             const sev = (r.severity || '').toLowerCase();
             let sevColor = sev;
             if (sev === 'critical') sevColor = chalk.bgRed.white.bold(sev);
@@ -105,7 +151,7 @@ program
         if (thresholdIdx === -1) {
           console.log(chalk.red(`Unknown severity for --fail-on: ${options.failOn}`));
         } else {
-          const failed = result.results && result.results.some((r: any) => {
+          const failed = (result.results as any[]) && (result.results as any[]).some((r: any) => {
             const idx = severityOrder.indexOf((r.severity || '').toLowerCase());
             return idx >= thresholdIdx;
           });
@@ -116,6 +162,7 @@ program
         }
       }
     } catch (err) {
+      if (activeTunnel) activeTunnel.close();
       spinner.fail(chalk.red('Scan failed ⚠️: ' + err));
       process.exit(1);
     }
