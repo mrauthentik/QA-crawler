@@ -7,6 +7,13 @@ import { createTunnel, isLocalUrl, extractPort } from './tunnel';
 import { SnapshotManager } from './snapshotManager';
 import fs from 'fs';
 import { generatePdfReport } from './pdfReport';
+import {
+  loadCredentials,
+  saveCredentials,
+  clearCredentials,
+  getAuthServiceUrl,
+  loginInteractive,
+} from './auth';
 
 const program = new Command();
 
@@ -50,6 +57,127 @@ For lighthouse: npm install -g lighthouse
 
 For more info, see: https://github.com/mrauthentik/QA-crawler
 `);
+
+program
+  .command('login')
+  .description('Authenticate with QA Detective (opens browser for OAuth login)')
+  .option('--token <token>', 'Set token directly (for CI/automation)')
+  .action(async (options) => {
+    try {
+      if (options.token) {
+        // Direct token input
+        saveCredentials({
+          token: options.token,
+          email: 'unknown',
+          name: 'CI User',
+        });
+        console.log(chalk.green('✓ Token saved to ~/.qa-detective/credentials.json'));
+        return;
+      }
+
+      const spinner = ora('Initializing login...').start();
+
+      const authUrl = getAuthServiceUrl();
+      const deviceCodeUrl = `${authUrl}/api/auth/device-code`;
+
+      // Step 1: Get device code
+      spinner.text = 'Requesting device code...';
+      const codeRes = await fetch(deviceCodeUrl, { method: 'POST' });
+
+      if (!codeRes.ok) {
+        throw new Error('Failed to get device code from auth service');
+      }
+
+      const codeData = (await codeRes.json()) as {
+        deviceCode: string;
+        userCode: string;
+        verificationUrl: string;
+        expiresIn: number;
+      };
+      const { userCode, verificationUrl, deviceCode, expiresIn } = codeData;
+
+      spinner.succeed();
+
+      // Step 2: Open browser for user to authenticate
+      console.log(chalk.cyan('\n🔐 Browser login initiated:\n'));
+      console.log(chalk.bold(`   Code: ${userCode}`));
+      console.log(`   URL:  ${verificationUrl}\n`);
+
+      const { execSync } = require('child_process');
+      try {
+        const openCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+        execSync(`${openCmd} "${verificationUrl}"`, { stdio: 'ignore' });
+      } catch {
+        // Browser open failed, user will visit manually
+      }
+
+      // Step 3: Poll for token
+      const pollUrl = `${authUrl}/api/auth/device-token`;
+      const pollSpinner = ora('Waiting for authentication...').start();
+
+      const startTime = Date.now();
+      const timeoutMs = expiresIn * 1000;
+
+      while (Date.now() - startTime < timeoutMs) {
+        await new Promise(r => setTimeout(r, 3000)); // Poll every 3 seconds
+
+        try {
+          const tokenRes = await fetch(pollUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deviceCode }),
+          });
+
+          if (tokenRes.status === 200) {
+            const tokenData = (await tokenRes.json()) as {
+              token: string;
+              email: string;
+              name: string;
+            };
+
+            saveCredentials({
+              token: tokenData.token,
+              email: tokenData.email,
+              name: tokenData.name,
+            });
+
+            pollSpinner.succeed(chalk.green('✓ Authenticated!'));
+            console.log(chalk.cyan(`\nLogged in as: ${tokenData.name} (${tokenData.email})`));
+            console.log(chalk.gray('Token saved to ~/.qa-detective/credentials.json\n'));
+            return;
+          }
+        } catch (err) {
+          // Continue polling on error
+        }
+      }
+
+      pollSpinner.fail(chalk.red('Authentication timeout'));
+      process.exit(1);
+    } catch (err) {
+      console.error(chalk.red(`\n✗ Login failed: ${(err as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('logout')
+  .description('Clear stored credentials')
+  .action(() => {
+    clearCredentials();
+    console.log(chalk.green('✓ Logged out'));
+  });
+
+program
+  .command('whoami')
+  .description('Show current logged-in user')
+  .action(() => {
+    const creds = loadCredentials();
+    if (!creds) {
+      console.log(chalk.yellow('Not logged in. Run: qa-detective login'));
+      return;
+    }
+    console.log(chalk.cyan(`${creds.name} (${creds.email})`));
+  });
 
 program
   .command('scan')
@@ -128,7 +256,26 @@ program
         spinner.text = messages[status] || `Status: ${status}`;
       };
 
-      if (options.token) process.env.QA_DETECTIVE_TOKEN = options.token;
+      // Auto-load stored credentials if no token provided
+      let token = options.token || process.env.QA_DETECTIVE_TOKEN;
+      if (!token) {
+        const creds = loadCredentials();
+        if (creds) {
+          token = creds.token;
+          spinner.text = `Using stored credentials for ${creds.email}...`;
+        }
+      }
+
+      if (token) process.env.QA_DETECTIVE_TOKEN = token;
+      else if (!options.local) {
+        spinner.fail(chalk.yellow('No authentication found'));
+        console.log(chalk.cyan('\n🔐 Get started:\n'));
+        console.log(chalk.white('  1. Login:'));
+        console.log(chalk.gray('     $ qa-detective login\n'));
+        console.log(chalk.white('  2. Run your first scan:'));
+        console.log(chalk.gray(`     $ qa-detective scan ${url}\n`));
+        process.exit(1);
+      }
 
       const result = await runScan({
         url: scanUrl,
