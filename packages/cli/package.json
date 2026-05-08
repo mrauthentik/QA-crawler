@@ -21,8 +21,6 @@
         "tunnel",
         "ngrok"
     ],
-        "cli"
-    ],
     "author": "https://github.com/mrauthentik/QA-crawler",
     "license": "MIT",
     "main": "dist/index.js",
