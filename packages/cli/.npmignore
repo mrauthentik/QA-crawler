@@ -1,0 +1,41 @@
+# Source files
+src/
+
+# Test files
+test/
+*.test.ts
+*.test.js
+__snapshots__/
+
+# Development files
+.env
+.env.local
+*.log
+
+# Configuration files
+jest.config.js
+tsconfig.json
+.editorconfig
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts (not needed, we include dist/)
+.cache/
+
+# Documentation
+TESTING.md
+CONTRIBUTING.md
+PRODUCTION_SETUP.md
+ARCHITECTURE.md
+QUICK_REFERENCE.md
+MIGRATION.md
+COMPLETE_UPDATE.md
+setup.sh

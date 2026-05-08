@@ -3,6 +3,8 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { runScan } from './scanRunner';
+import { createTunnel, isLocalUrl, extractPort } from './tunnel';
+import { SnapshotManager } from './snapshotManager';
 import fs from 'fs';
 import { generatePdfReport } from './pdfReport';
 
@@ -21,9 +23,27 @@ Examples:
   $ qa-detective scan https://myapp.com --output report.pdf --format pdf
   $ qa-detective scan https://myapp.com --checks security,performance,lighthouse,load --max-pages 5
   $ qa-detective scan https://myapp.com --fail-on critical
+  
+  Snapshot Testing:
+  $ qa-detective scan https://myapp.com --snapshot
+  $ qa-detective scan https://myapp.com --check-snapshot --snapshot-verbose
+  $ qa-detective snapshot list
+  $ qa-detective snapshot delete --url https://myapp.com
+  $ qa-detective snapshot clear
 
 Checks available:
   security, performance, accessibility, load (Artillery), lighthouse (web perf)
+
+Snapshot Testing:
+  --snapshot               Save results as baseline snapshot
+  --check-snapshot         Check results against baseline (default: enabled)
+  --snapshot-dir <dir>     Where to store snapshots (default: .qa-snapshots)
+  --snapshot-verbose       Show detailed snapshot comparison
+
+Snapshot Commands:
+  snapshot list            List all stored snapshots
+  snapshot delete --url    Delete snapshot for specific URL
+  snapshot clear           Delete all snapshots
 
 For load: npm install -g artillery
 For lighthouse: npm install -g lighthouse
@@ -44,22 +64,118 @@ program
   .option('-t, --timeout <ms>', 'Navigation timeout in milliseconds (default: 30000)', '30000')
   .option('-H, --header <header...>', 'Custom HTTP headers (repeatable, e.g., -H "Authorization: Bearer ...")')
   .option('--fail-on <severity>', 'Exit with code 1 if severity found (e.g., critical,high)')
+  .option('--token <token>', 'QA Detective API token (or set QA_DETECTIVE_TOKEN env var)')
+  .option('--local', 'Run scan locally using Python agent (requires Python 3.8+)')
+  .option('--public-url <url>', 'Use custom public URL instead of auto tunnel (for localhost scans)')
+  .option('--tunnel-provider <provider>', 'Tunnel provider: ngrok, localtunnel, cloudflare (default: ngrok)', 'ngrok')
+  .option('--snapshot', 'Save results as baseline snapshot for future comparisons')
+  .option('--check-snapshot', 'Check results against baseline snapshot (default: true)', true)
+  .option('--snapshot-dir <dir>', 'Directory to store snapshots (default: .qa-snapshots)', '.qa-snapshots')
+  .option('--snapshot-verbose', 'Show detailed snapshot comparison results')
   
   //this take care of the scan logic and output handling
   .action(async (url, options) => {
     const spinner = ora('Scanning...').start();
+    let activeTunnel: { publicUrl: string; close: (() => Promise<void>) | (() => void); provider?: string } | null = null;
     try {
+      // Handle localhost URLs — create tunnel so API can reach it
+      let scanUrl = url;
+
+      if (isLocalUrl(url)) {
+        spinner.text = 'localhost detected...';
+        
+        // Use custom public URL if provided
+        if (options.publicUrl) {
+          scanUrl = options.publicUrl;
+          spinner.text = `Using custom public URL: ${scanUrl}`;
+          console.log('\n' + chalk.cyan(`  🔗 Using provided URL: ${scanUrl}`));
+        } else {
+          // Create automatic tunnel
+          spinner.text = 'localhost detected — creating public tunnel...';
+          process.env.QA_DETECTIVE_TUNNEL_PROVIDER = options.tunnelProvider;
+          
+          try {
+            const port = extractPort(url);
+            activeTunnel = await createTunnel(port);
+            scanUrl = activeTunnel.publicUrl;
+            spinner.text = `Tunnel created: ${scanUrl}`;
+            console.log('\n' + chalk.cyan(`  🔗 Tunnel: ${url} → ${scanUrl}`));
+            console.log(chalk.gray(`  Provider: ${activeTunnel.provider}`));
+            // Give tunnel a moment to stabilise
+            await new Promise(r => setTimeout(r, 1500));
+          } catch (err) {
+            const errorMsg = (err as Error).message;
+            spinner.fail(chalk.red(`\nTunnel creation failed:\n${errorMsg}`));
+            console.log(chalk.yellow('\n💡 Quick fixes:\n'));
+            console.log(chalk.white('  1. Use ngrok (most reliable):'));
+            console.log(chalk.gray('     - Get free token: https://dashboard.ngrok.com\n     - export NGROK_AUTHTOKEN=your_token\n     - qa-detective scan http://localhost:3000\n'));
+            console.log(chalk.white('  2. Provide your own public URL:'));
+            console.log(chalk.gray('     - qa-detective scan http://localhost:3000 --public-url https://your-tunnel.com\n'));
+            console.log(chalk.white('  3. Scan external URL instead of localhost\n'));
+            process.exit(1);
+          }
+        }
+      }
+
+      // Update spinner with progress
+      const onProgress = (status: string) => {
+        const messages: Record<string, string> = {
+          queued: 'Run queued — waiting for worker...',
+          running: 'Investigation in progress — crawling and testing...',
+          completed: 'Analysis complete!',
+          failed: 'Run failed',
+        };
+        spinner.text = messages[status] || `Status: ${status}`;
+      };
+
+      if (options.token) process.env.QA_DETECTIVE_TOKEN = options.token;
+
       const result = await runScan({
-        url,
+        url: scanUrl,
         authEmail: options.authEmail,
         authPassword: options.authPassword,
         authLoginUrl: options.authLoginUrl,
         checks: options.checks,
         maxPages: options.maxPages,
         timeout: options.timeout,
-        headers: options.header
-      });
+        headers: options.header,
+      }, onProgress);
+      if (activeTunnel) {
+        await activeTunnel.close();
+      }
       spinner.succeed(chalk.green('Scan completed! 🚀'));
+      
+      // Handle snapshot testing
+      const snapshotManager = new SnapshotManager(options.snapshotDir);
+      if (options.snapshot) {
+        const saveResult = snapshotManager.saveSnapshot(url, result);
+        console.log(chalk.cyan(`\n📸 ${saveResult.message}`));
+      } else if (options.checkSnapshot) {
+        const checkResult = snapshotManager.checkSnapshot(url, result);
+        console.log(chalk.cyan(`\n📸 ${checkResult.message}`));
+        
+        if (checkResult.changes && checkResult.changes.length > 0) {
+          console.log(chalk.yellow(`\n⚠️ ${checkResult.changes.length} change(s) detected:`));
+          for (const change of checkResult.changes) {
+            console.log(chalk.gray(`  • ${change.field}`));
+            if (options.snapshotVerbose) {
+              console.log(chalk.gray(`    Previous: ${JSON.stringify(change.previous).substring(0, 50)}...`));
+              console.log(chalk.gray(`    Current:  ${JSON.stringify(change.current).substring(0, 50)}...`));
+            }
+          }
+          console.log(chalk.gray(`\n  Run with --snapshot to update baseline`));
+        }
+      }
+      
+      if (result.grade) {
+        console.log(chalk.bold(`\nGrade: ${result.grade} | Score: ${result.score}/100`));
+      }
+      if (result.summary) {
+        console.log(chalk.gray(`\nSummary: ${result.summary}\n`));
+      }
+      if (result.reportUrl) {
+        console.log(chalk.cyan(`Full report: ${result.reportUrl}\n`));
+      }
 
       // Handle --output flag
       if (options.output) {
@@ -76,7 +192,7 @@ program
       } else {
         // Pretty-print results with colored severities (one per line)
         if (result && result.results && Array.isArray(result.results)) {
-          for (const r of result.results) {
+          for (const r of (result.results as any[])) {
             const sev = (r.severity || '').toLowerCase();
             let sevColor = sev;
             if (sev === 'critical') sevColor = chalk.bgRed.white.bold(sev);
@@ -105,7 +221,7 @@ program
         if (thresholdIdx === -1) {
           console.log(chalk.red(`Unknown severity for --fail-on: ${options.failOn}`));
         } else {
-          const failed = result.results && result.results.some((r: any) => {
+          const failed = (result.results as any[]) && (result.results as any[]).some((r: any) => {
             const idx = severityOrder.indexOf((r.severity || '').toLowerCase());
             return idx >= thresholdIdx;
           });
@@ -116,7 +232,59 @@ program
         }
       }
     } catch (err) {
-      spinner.fail(chalk.red('Scan failed ⚠️: ' + err));
+      if (activeTunnel) {
+        try {
+          await activeTunnel.close();
+        } catch (closeErr) {
+          console.warn(chalk.gray('Could not close tunnel:', (closeErr as Error).message));
+        }
+      }
+      spinner.fail(chalk.red(`Scan failed ⚠️: ${(err as Error).message}`));
+      process.exit(1);
+    }
+  });
+
+// Snapshot management command
+program
+  .command('snapshot <action>')
+  .argument('<action>', 'Action: list, delete, clear (delete all)')
+  .option('--url <url>', 'URL of snapshot to delete')
+  .option('--snapshot-dir <dir>', 'Directory storing snapshots (default: .qa-snapshots)', '.qa-snapshots')
+  .description('Manage snapshot baselines')
+  .action((action, options) => {
+    const snapshotManager = new SnapshotManager(options.snapshotDir);
+
+    if (action === 'list') {
+      const snapshots = snapshotManager.listSnapshots();
+      
+      if (snapshots.length === 0) {
+        console.log(chalk.yellow('No snapshots found.'));
+        return;
+      }
+
+      console.log(chalk.bold('\n📸 Stored Snapshots:\n'));
+      snapshots.forEach((snapshot, idx) => {
+        console.log(chalk.cyan(`${idx + 1}. ${snapshot.url}`));
+        console.log(chalk.gray(`   File: ${snapshot.filename}`));
+        console.log(chalk.gray(`   Date: ${new Date(snapshot.timestamp).toLocaleString()}\n`));
+      });
+    } else if (action === 'delete') {
+      if (!options.url) {
+        console.log(chalk.red('Error: --url is required for delete action'));
+        process.exit(1);
+      }
+
+      const deleted = snapshotManager.deleteSnapshot(options.url);
+      if (deleted) {
+        console.log(chalk.green(`✅ Snapshot deleted for ${options.url}`));
+      } else {
+        console.log(chalk.yellow(`⚠️ No snapshot found for ${options.url}`));
+      }
+    } else if (action === 'clear') {
+      const count = snapshotManager.deleteAllSnapshots();
+      console.log(chalk.green(`✅ Deleted ${count} snapshot(s)`));
+    } else {
+      console.log(chalk.red(`Unknown action: ${action}. Use: list, delete, clear`));
       process.exit(1);
     }
   });

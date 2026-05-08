@@ -11,8 +11,8 @@ COPY apps/dashboard/ ./apps/dashboard/
 RUN pnpm install --frozen-lockfile
 
 # Bake public URLs into the build
-ENV NEXT_PUBLIC_API_URL=https://qa-detective-api-production.up.railway.app
-ENV NEXT_PUBLIC_AUTH_URL=https://qa-detective-auth-production.up.railway.app
+ENV NEXT_PUBLIC_API_URL=https://qa-detectiveapi-production.up.railway.app
+ENV NEXT_PUBLIC_AUTH_URL=https://qa-detectiveauth-production.up.railway.app
 
 RUN cd apps/dashboard && pnpm run build
 

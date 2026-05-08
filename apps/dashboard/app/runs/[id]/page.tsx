@@ -228,6 +228,15 @@ export default function RunPage() {
     </div>
   );
 
+  // Extract network quality from performance test metadata
+  const perfResult = run.results?.find(r => r.name?.toLowerCase().includes('performance'));
+  const networkQuality: string = (perfResult as any)?.metadata?.networkQuality ?? 'unknown';
+  const networkLatency: number = (perfResult as any)?.metadata?.networkLatency ?? 0;
+  const networkAffectedPerf = run.results?.some(r =>
+    r.message?.toLowerCase().includes('slow network') ||
+    r.message?.toLowerCase().includes('medium network')
+  ) ?? false;
+
   const failed = run.results?.filter(r => r.status === 'failed' || r.status === 'error') ?? [];
   const passed = run.results?.filter(r => r.status === 'passed') ?? [];
   const sortedFailed = [...failed].sort(
@@ -405,6 +414,48 @@ export default function RunPage() {
               )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Network quality banner */}
+      {networkAffectedPerf && networkQuality !== 'unknown' && networkQuality !== 'fast' && (
+        <div style={{
+          padding: '16px 20px',
+          marginBottom: '24px',
+          background: networkQuality === 'slow' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)',
+          border: `1px solid ${networkQuality === 'slow' ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
+          borderRadius: '2px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px',
+        }}>
+          <AlertTriangle
+            size={16}
+            color={networkQuality === 'slow' ? 'var(--accent-red)' : 'var(--accent-amber)'}
+            style={{ flexShrink: 0, marginTop: '2px' }}
+          />
+          <div>
+            <div className="font-mono" style={{
+              fontSize: '0.72rem',
+              letterSpacing: '0.1em',
+              color: networkQuality === 'slow' ? 'var(--accent-red)' : 'var(--accent-amber)',
+              marginBottom: '6px',
+            }}>
+              {networkQuality === 'slow' ? '⚠ SLOW NETWORK DETECTED' : '⚠ MEDIUM NETWORK DETECTED'}
+            </div>
+            <p style={{
+              fontFamily: 'IBM Plex Sans, sans-serif',
+              fontSize: '0.85rem',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.6,
+              margin: 0,
+            }}>
+              {networkQuality === 'slow'
+                ? `Your internet connection was slow during this test (avg latency: ${Math.round(networkLatency)}ms). Performance findings like slow load times may be caused by your network, not the website itself. Re-run the test on a faster connection for accurate performance results.`
+                : `A medium-speed connection was detected during testing (avg latency: ${Math.round(networkLatency)}ms). Performance thresholds were adjusted accordingly. Results may differ on faster networks.`
+              }
+            </p>
           </div>
         </div>
       )}
